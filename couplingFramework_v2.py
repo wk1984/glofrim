@@ -163,7 +163,7 @@ else:
 # get start time of simulation
 t_start = datetime.datetime.now()
 # initiate logging and define folder for verbose-output
-verbose_folder = model_functions.write2log(model_dir, model_file, latlon, use_Fluxes, use_RFS, t_start)
+verbose_folder = model_functions.write2log(model_dir, model_file, latlon, use_2way, use_Fluxes, use_RFS, t_start)
 
 # initiate PCR-GLOBWB
 model_pcr = pcrglobwb_bmi_v203.pcrglobwb_bmi.pcrglobwbBMI()
@@ -189,16 +189,16 @@ print '\n>>> Hydrodynamic Model Initialized <<<\n'
 if model_type == 'DFM':
 
     #- retrieving data from Delft3D FM    
-    x_coords, y_coords, z_coords, bottom_lvl, cell_points_fm, separator_1D, cellAreaSpherical, xz_coords, yz_coords, modelCoords, \
-                cellarea_data_pcr, landmask_data_pcr, clone_data_pcr = model_functions.extractModelData_FM(model_hydr, model_pcr, landmask_pcr, clone_pcr, use_RFS)
+    x_coords, y_coords, z_coords, bottom_lvl, cell_points_fm, separator_1D, cellAreaSpherical, xz_coords, yz_coords, modelCoords, modelCoords_2way,\
+                cellarea_data_pcr, landmask_data_pcr, clone_data_pcr = model_functions.extractModelData_FM(model_hydr, model_pcr, landmask_pcr, clone_pcr, use_RFS, use_2way)
     print '\n>>> DFM data retrieved <<<\n'
          
 elif model_type == 'LFP':
     
     #- retrieving data from LISFLOOD-FP
     dx, dy, DEM, bottom_lvl, H, waterDepth, rows, cols, \
-                list_x_coords, list_y_coords, coupledFPindices, grid_dA, cellAreaSpherical, SGCQin, \
-                cellarea_data_pcr, landmask_data_pcr, clone_data_pcr = model_functions.extractModelData_FP(model_hydr, model_dir, model_pcr, landmask_pcr, clone_pcr, verbose_folder, use_RFS, verbose)
+                list_x_coords, list_y_coords, coupledFPindices, coupledFPindices_2way, grid_dA, cellAreaSpherical, SGCQin, \
+                cellarea_data_pcr, landmask_data_pcr, clone_data_pcr = model_functions.extractModelData_FP(model_hydr, model_dir, model_pcr, landmask_pcr, clone_pcr, verbose_folder, use_RFS, use_2way, verbose)
 
     separator_1D = 0. # setting separator between 1-D and 2-D to 0 as only used for DFM
 

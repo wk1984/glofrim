@@ -38,7 +38,7 @@ def set_values_in_array(vals, idx, update_vals):
 
 # =============================================================================
 
-def write2log(model_dir, model_file, latlon, useFluxes, use_RFS, t_start, t_end = 0.):
+def write2log(model_dir, model_file, latlon, use_2way, useFluxes, use_RFS, t_start, t_end = 0.):
     """
     Writing model settings/paths/etc to a txt-file in directory.
     Note that PCR-GLOBWB is additionally writing its own log-file and Delft3D DFM adds model
@@ -65,6 +65,8 @@ def write2log(model_dir, model_file, latlon, useFluxes, use_RFS, t_start, t_end 
     fo.write(model_file + os.linesep)
     fo.write('model start-time: ')
     fo.write(str(t_start) + os.linesep)
+    fo.write('2way activated: ')
+    fo.write(str(use_2way) + os.linesep)
     fo.write('lat-lon activated: ')
     fo.write(str(latlon) + os.linesep)
     fo.write('forcing by fluxes activated: ') 
@@ -96,7 +98,7 @@ def write2log(model_dir, model_file, latlon, useFluxes, use_RFS, t_start, t_end 
 
 # =============================================================================
 
-def extractModelData_FM(model, model_pcr, landmask_pcr, clone_pcr, useRFS):
+def extractModelData_FM(model, model_pcr, landmask_pcr, clone_pcr, useRFS, use_2way):
     """
     Extracting data by using BMI-command "get_var", and preparing it depending 
     on model specification from initialized Delft3D FM model to be used later in the model run.
@@ -138,18 +140,22 @@ def extractModelData_FM(model, model_pcr, landmask_pcr, clone_pcr, useRFS):
     # for 2D part, x- and y-coords of corner points have to be allocated to cells
     elif useRFS == False:
 		modelCoords = coupling_functions.getFMcoords(cell_points_fm, x_coords, y_coords)
+	if use_2way == True:
+		modelCoords_2way = coupling_functions.getFMcoords(cell_points_fm, x_coords, y_coords)
+    elif use_2way == False:
+        modelCoords_2way = []
 
     # retrieve PCR-data
     cellarea_data_pcr    = model_pcr.get_var('cellArea')
     landmask_data_pcr    = pcr.readmap(landmask_pcr)
     clone_data_pcr       = pcr.readmap(clone_pcr)
     
-    return x_coords, y_coords, z_coords, bottom_lvl, cell_points_fm, separator, cellAreaSpherical, xz_coords, yz_coords, modelCoords, \
+    return x_coords, y_coords, z_coords, bottom_lvl, cell_points_fm, separator, cellAreaSpherical, xz_coords, yz_coords, modelCoords, modelCoords_2way, \
                 cellarea_data_pcr, landmask_data_pcr, clone_data_pcr
                 
 # =============================================================================
     
-def extractModelData_FP(model, model_dir, model_pcr, landmask_pcr, clone_pcr, verbose_folder, use_RFS, verbose):
+def extractModelData_FP(model, model_dir, model_pcr, landmask_pcr, clone_pcr, verbose_folder, use_RFS, use_2way, verbose):
     """
     Extracting data by using BMI-command "get_var", and preparing it depending 
     on model specification from initialized LISFLOOD-FP model to be used later in the model run.
@@ -191,35 +197,20 @@ def extractModelData_FP(model, model_dir, model_pcr, landmask_pcr, clone_pcr, ve
     # compute list with centre point coords of each LFP-cell to be coupled to PCR-GLOBWB 
     # if RFS active, mask LFP-cells only to those with channel data and without missing values
     if use_RFS == True:
-        # list_x_coords = []
-        # list_y_coords = []
-        # coupledFPindices = []
         i, j = np.where(np.logical_and(SGCwidth > 0., DEM != -9999))
     elif use_RFS == False:
         i, j = np.where(DEM != -9999)
         list_x_coords = grid_x_coords[i, j]
         list_y_coords = grid_y_coords[i, j]
         coupledFPindices = zip(i, j)
-        # for i in xrange(len(grid_x_coords)):
-        #     for j in xrange(len(grid_x_coords[1])):
-        #         if (SGCwidth[i][j] > 0.0) and (DEM[i][j] != -9999):
-        #             list_x_coords = np.append(list_x_coords, grid_x_coords[i][j])
-        #             list_y_coords = np.append(list_y_coords, grid_y_coords[i][j])
-        #             coupledFPindices.append((i, j))
- 
-    # otherwise, only mask out those cells containing missing values
-    # elif use_RFS == False:
-    #     list_x_coords = []
-    #     list_y_coords = []
-    #     coupledFPindices = []
-    #
-    #     for i in xrange(len(grid_x_coords)):
-    #         for j in xrange(len(grid_x_coords[1])):
-    #             if DEM[i][j] != -9999:
-    #                 list_x_coords = np.append(list_x_coords, grid_x_coords[i][j])
-    #                 list_y_coords = np.append(list_y_coords, grid_y_coords[i][j])
-    #                 coupledFPindices.append((i, j))
-        
+    if use_2way == True:
+        i, j = np.where(DEM != -9999)
+        list_x_coords = grid_x_coords[i, j]
+        list_y_coords = grid_y_coords[i, j]
+        coupledFPindices_2way = zip(i, j)
+    elif use_2way == False:
+		coupledFPindices_2way = []
+		        
     # print and save verbose output
     if verbose == True:
         print 'x, y of corners of overall grid'
@@ -241,7 +232,7 @@ def extractModelData_FP(model, model_dir, model_pcr, landmask_pcr, clone_pcr, ve
     clone_data_pcr       = pcr.readmap(clone_pcr)
     
     return dx, dy, DEM, bottom_lvl, H, waterDepth, rows, cols, \
-                list_x_coords, list_y_coords, coupledFPindices, grid_dA, list_dA, SGCQin, \
+                list_x_coords, list_y_coords, coupledFPindices, coupledFPindices_2way, grid_dA, list_dA, SGCQin, \
                 cellarea_data_pcr, landmask_data_pcr, clone_data_pcr 
     
 # =============================================================================
