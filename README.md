@@ -1,6 +1,10 @@
 # GLOFRIM
 Globally Applicable Framework for Integrated Hydrological-Hydrodynamic Modelling (GLOFRIM)
 
+# Important Note
+This development branch is by far not ready for application.
+For the time being, we refer to the downloadable material in the master branch.
+
 # Content of package
 	couplingFramework_v1.py: script to execute the coupling process
 	default.set: example of the coupling settings-file

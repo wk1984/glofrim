@@ -1,9 +1,9 @@
 from setuptools import setup, find_packages
 import os
 
-setup(name='coupling_PCR_FM',
+setup(name='coupling_PCR_FM_2way',
       version='2.0',
-      description="functions used to couple PCR-GLOBWB to D-Flow FM",
+      description="functions used for two-directional coupling between hydrology and hydrodynamics",
       long_desciption="""\
 """,
       classifiers=[], 
