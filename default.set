@@ -17,6 +17,8 @@ landmask_pcr = /path/to/landmask/of/domain/landmask.map
 clone_pcr = /path/to/clonemap/of/domain/clone.map
 
 [general_settings]
+# specify whether to apply 2way coupling or not (then: 1way coupling only)
+2way coupling 		= True
 # specify whether hydrodynamic model is in lat/lon system
 latlon 		= True
 # specify model forcing (when False, states [m] are used; when True, fluxes [m3/timeUnit])

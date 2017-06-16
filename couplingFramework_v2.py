@@ -69,9 +69,9 @@ import datetime
 import bmi.wrapper
 import pcrglobwb_bmi_v203 as pcrglobwb_bmi_v203
 from pcrglobwb_bmi_v203 import pcrglobwb_bmi
-from coupling_PCR_FM import coupling_functions
-from coupling_PCR_FM import model_functions
-from coupling_PCR_FM import configuration
+from coupling_PCR_FM_2way import coupling_functions
+from coupling_PCR_FM_2way import model_functions
+from coupling_PCR_FM_2way import configuration
 
 # -------------------------------------------------------------------------------------------------
 # IMPORT MODEL SETTINGS FROM INI-FILE
@@ -86,6 +86,7 @@ config.parse_configuration_file(sys.argv[1])
 
 model_type = config.model_type['model_type']                                                   
 
+use_2way = strtobool(config.general_settings['2way coupling'])
 latlon = strtobool(config.general_settings['latlon'])
 if latlon == False:
 	inProj  = pyproj.Proj(init=config.model_settings['model_projection'])
