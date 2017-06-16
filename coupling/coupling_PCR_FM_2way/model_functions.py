@@ -205,10 +205,12 @@ def extractModelData_FP(model, model_dir, model_pcr, landmask_pcr, clone_pcr, ve
         coupledFPindices = zip(i, j)
     if use_2way == True:
         i, j = np.where(DEM != -9999)
-        list_x_coords = grid_x_coords[i, j]
-        list_y_coords = grid_y_coords[i, j]
+        list_x_coords_2way = grid_x_coords[i, j]
+        list_y_coords_2way = grid_y_coords[i, j]
         coupledFPindices_2way = zip(i, j)
     elif use_2way == False:
+		list_x_coords_2way = []
+		list_y_coords_2way = []
 		coupledFPindices_2way = []
 		        
     # print and save verbose output
@@ -231,8 +233,10 @@ def extractModelData_FP(model, model_dir, model_pcr, landmask_pcr, clone_pcr, ve
     landmask_data_pcr    = pcr.readmap(landmask_pcr)
     clone_data_pcr       = pcr.readmap(clone_pcr)
     
+    separator_1D = 0. # setting separator between 1-D and 2-D to 0 as only used for DFM
+    
     return dx, dy, DEM, bottom_lvl, H, waterDepth, rows, cols, \
-                list_x_coords, list_y_coords, coupledFPindices, coupledFPindices_2way, grid_dA, list_dA, SGCQin, \
+                list_x_coords, list_x_coords_2way, list_y_coords, list_y_coords_2way, coupledFPindices, coupledFPindices_2way, grid_dA, list_dA, SGCQin, separator_1D,\
                 cellarea_data_pcr, landmask_data_pcr, clone_data_pcr 
     
 # =============================================================================

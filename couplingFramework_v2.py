@@ -197,13 +197,12 @@ elif model_type == 'LFP':
     
     #- retrieving data from LISFLOOD-FP
     dx, dy, DEM, bottom_lvl, H, waterDepth, rows, cols, \
-                list_x_coords, list_y_coords, coupledFPindices, coupledFPindices_2way, grid_dA, cellAreaSpherical, SGCQin, \
+                list_x_coords, list_x_coords_2way, list_y_coords, list_y_coords_2way, coupledFPindices, coupledFPindices_2way, grid_dA, cellAreaSpherical, SGCQin, separator_1D,\
                 cellarea_data_pcr, landmask_data_pcr, clone_data_pcr = model_functions.extractModelData_FP(model_hydr, model_dir, model_pcr, landmask_pcr, clone_pcr, verbose_folder, use_RFS, use_2way, verbose)
-
-    separator_1D = 0. # setting separator between 1-D and 2-D to 0 as only used for DFM
-
+                
     #- computing FP-coordinates    
     modelCoords = coupling_functions.getVerticesFromMidPoints(list_x_coords, list_y_coords, dx, dy, verbose)
+    modelCoords_2way = coupling_functions.getVerticesFromMidPoints(list_x_coords_2way, list_y_coords_2way, dx, dy, verbose)
     print '\n>>> LFP data retrieved <<<\n'
 
 #- computing PCR-coordinates
@@ -218,6 +217,8 @@ CoupledCellsInfoAll = coupling_functions.coupleAllCells(modelCoords,PCRcoords)
 
 # converting single indices of coupled PCR cells to double (array,column) indices
 CoupleModel2PCR, CouplePCR2model, CoupledPCRcellIndices = coupling_functions.assignPCR2cells(landmask_pcr, modelCoords, verbose)
+# converting single indices of coupled PCR cells to double (array,column) indices for 2way coupling
+CoupleModel2PCR_2way, CouplePCR2model_2way, CoupledPCRcellIndices_2way = coupling_functions.assignPCR2cells(landmask_pcr, modelCoords_2way, verbose)
 
 # saving plots of coupled cells to verbose-folder
 # currently doesn't work with FM and use_RFS on, due to data structure required (? check this ?)
