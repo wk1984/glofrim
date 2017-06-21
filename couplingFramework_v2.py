@@ -213,9 +213,11 @@ CoupledCellsInfoAll = coupling_functions.coupleAllCells(modelCoords,PCRcoords)
 CoupledCellsInfoAll_2way = coupling_functions.coupleAllCells(modelCoords_2way,PCRcoords)
 
 # converting single indices of coupled PCR cells to double (array,column) indices
-CoupleModel2PCR, CouplePCR2model, CoupledPCRcellIndices = coupling_functions.assignPCR2cells(landmask_pcr, modelCoords, verbose)
-# converting single indices of coupled PCR cells to double (array,column) indices for 2way coupling
-CoupleModel2PCR_2way, CouplePCR2model_2way, CoupledPCRcellIndices_2way = coupling_functions.assignPCR2cells(landmask_pcr, modelCoords_2way, verbose)
+if use_2way == False:
+    CoupleModel2PCR, CouplePCR2model, CoupledPCRcellIndices = coupling_functions.assignPCR2cells(landmask_pcr, modelCoords, verbose)
+elif use_2way == True:
+    CoupleModel2PCR, CouplePCR2model, CoupledPCRcellIndices = coupling_functions.assignPCR2cells(landmask_pcr, modelCoords, verbose)
+    CoupleModel2PCR_2way, CouplePCR2model_2way, CoupledPCRcellIndices_2way = coupling_functions.assignPCR2cells(landmask_pcr, modelCoords_2way, verbose)
 
 # saving plots of coupled cells to verbose-folder
 # currently doesn't work with FM and use_RFS on, due to data structure required (? check this ?)
@@ -233,7 +235,7 @@ if verbose == True:
     plt.savefig(os.path.join(verbose_folder , 'CoupledCells_2way.png'))   
     plt.close('all')
 
-#pdb.set_trace()
+pdb.set_trace()
 
 # -------------------------------------------------------------------------------------------------
 # TURNING OFF CHANNELSTORAGE, WATERBODYSTORAGE, WATERBODIES AND RUNOFF TO CHANNELS
@@ -351,7 +353,7 @@ while model_pcr.get_time_step() < nr_pcr_timesteps:
 # get end time of simulation
 t_end = datetime.datetime.now()
 # update and finalize logging
-model_functions.write2log(model_dir, model_file, latlon, use_Fluxes, use_RFS, t_start, t_end) 
+model_functions.write2log(model_dir, model_file, latlon, use_Fluxes, use_RFS, t_start, verbose, t_end) 
 # close files
 if verbose == True:
     fo_PCR_V_tot.close()

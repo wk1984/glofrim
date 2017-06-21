@@ -86,7 +86,7 @@ def write2log(model_dir, model_file, latlon, use_2way, useFluxes, use_RFS, t_sta
         print 'lat-lon on: ', bool(latlon)
         print 'fluxes on: ', bool(useFluxes)
         print 'RFS on: ', bool(use_RFS)
-        print 'verbose mode on: ', verbose
+        print 'verbose mode on: ', bool(verbose)
         print '\nModel Start-Time: ', t_start
         print '\nVerbose Output and Log-File saved in: ', folder_name + os.linesep
         fo.write('... model still running ...')
