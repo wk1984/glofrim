@@ -723,12 +723,12 @@ def plotGridfromCoords(coordsGrid1, coordsGrid2=None, linewidthGrid1=1, linewidt
     
     # set polygon appearance
     if coordsGrid2 == None:
-        polygonsGrid1.set_aLFPha(0.2)
+        polygonsGrid1.set_alpha(0.2)
         polygonsGrid1.set_facecolor('black')
         polygonsGrid1.set_edgecolor('black')
         polygonsGrid1.set_linewidth(linewidthGrid1)
     else:
-        polygonsGrid1.set_aLFPha(1)
+        polygonsGrid1.set_alpha(1)
         polygonsGrid1.set_facecolor('white')
         polygonsGrid1.set_edgecolor('black')
         polygonsGrid1.set_linewidth(linewidthGrid1)
@@ -740,7 +740,7 @@ def plotGridfromCoords(coordsGrid1, coordsGrid2=None, linewidthGrid1=1, linewidt
     if coordsGrid2 != None:
         polygonsGrid2  = matplotlib.collections.PolyCollection(coordsGrid2)
     
-        polygonsGrid2.set_aLFPha(0.2)
+        polygonsGrid2.set_alpha(0.2)
         polygonsGrid2.set_facecolor('black')
         polygonsGrid2.set_edgecolor('black')
         polygonsGrid2.set_linewidth(linewidthGrid2)

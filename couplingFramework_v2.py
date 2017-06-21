@@ -72,6 +72,7 @@ from pcrglobwb_bmi_v203 import pcrglobwb_bmi
 from coupling_PCR_FM_2way import coupling_functions
 from coupling_PCR_FM_2way import model_functions
 from coupling_PCR_FM_2way import configuration
+import pdb
 
 # -------------------------------------------------------------------------------------------------
 # IMPORT MODEL SETTINGS FROM INI-FILE
@@ -142,19 +143,13 @@ clone_pcr        	=  config.PCR_settings['clone_pcr']
 
 # these may be changed according to personal file and folder structure
 if model_type == 'DFM':
-    if platform.system() == 'Linux':
-        model_path = '/path/to/DFLOWFM/lib/libdflowfm.so'  # for Linux
-    elif platform.system() == 'Windows':
-         model_path = '/path/to/DFLOWFM/lib/libdflowfm.dll'  # for Windows
+    model_path = config.model_paths['path2DFM']
 
 elif model_type == 'LFP':
-    if platform.system() == 'Linux':
-        model_path = '/path/to/lisflood-bmi-v5.9/liblisflood.so'  # for Linux
-    elif platform.system() == 'Windows':
-        sys.exit('\nLFP v5.9 with BMI currently not supported on Windows - sorry!\n')
+    model_path = config.model_paths['path2LFP']
 
 else:
-    sys.exit('\nno adequate model defined in set-file - define either DFM or LFP!\n')
+    sys.exit('\nno adequate model defined in configuration file - define either DFM or LFP!\n')
 
 # -------------------------------------------------------------------------------------------------
 # INITIALIZE AND SPIN-UP PCR-GLOBWB
@@ -163,12 +158,12 @@ else:
 # get start time of simulation
 t_start = datetime.datetime.now()
 # initiate logging and define folder for verbose-output
-verbose_folder = model_functions.write2log(model_dir, model_file, latlon, use_2way, use_Fluxes, use_RFS, t_start)
+verbose_folder = model_functions.write2log(model_dir, model_file, latlon, use_2way, use_Fluxes, use_RFS, t_start, verbose)
 
 # initiate PCR-GLOBWB
 model_pcr = pcrglobwb_bmi_v203.pcrglobwb_bmi.pcrglobwbBMI()
 model_pcr.initialize(config_pcr)
-print '\n>>> PCR-GLOBWB Initialized <<<\n' 
+print '\n>>> PCR Initialized <<<\n' 
 
 # spin-up PCR-GLOBWB
 model_pcr.spinup()
@@ -180,7 +175,7 @@ model_pcr.spinup()
 # initiate hydraulic model
 model_hydr = bmi.wrapper.BMIWrapper(engine = model_path, configfile = (os.path.join(model_dir, model_file)))
 model_hydr.initialize()
-print '\n>>> Hydrodynamic Model Initialized <<<\n' 
+print '\n>>> ', model_type, ' Initialized <<<\n' 
 
 # -------------------------------------------------------------------------------------------------
 # EXCTRACTING RELEVANT DATA FROM MODELS
@@ -207,6 +202,7 @@ elif model_type == 'LFP':
 
 #- computing PCR-coordinates
 PCRcoords = coupling_functions.getPCRcoords(landmask_data_pcr)
+print '\n>>> PCR data retrieved <<<\n'
 		
 # -------------------------------------------------------------------------------------------------
 # COUPLING THE GRIDS
@@ -214,6 +210,7 @@ PCRcoords = coupling_functions.getPCRcoords(landmask_data_pcr)
 
 # this is only required for plotting later, not for actual coupling process
 CoupledCellsInfoAll = coupling_functions.coupleAllCells(modelCoords,PCRcoords)
+CoupledCellsInfoAll_2way = coupling_functions.coupleAllCells(modelCoords_2way,PCRcoords)
 
 # converting single indices of coupled PCR cells to double (array,column) indices
 CoupleModel2PCR, CouplePCR2model, CoupledPCRcellIndices = coupling_functions.assignPCR2cells(landmask_pcr, modelCoords, verbose)
@@ -223,11 +220,20 @@ CoupleModel2PCR_2way, CouplePCR2model_2way, CoupledPCRcellIndices_2way = couplin
 # saving plots of coupled cells to verbose-folder
 # currently doesn't work with FM and use_RFS on, due to data structure required (? check this ?)
 if verbose == True: 
+	
     coupling_functions.plotGridfromCoords(PCRcoords, modelCoords)
-    plt.savefig(os.path.join(verbose_folder , 'AllCells.png'))
+    plt.savefig(os.path.join(verbose_folder , 'AllCells_1way.png'))
     coupling_functions.plotGridfromCoords(CoupledCellsInfoAll[1],CoupledCellsInfoAll[0])
-    plt.savefig(os.path.join(verbose_folder , 'CoupledCells.png'))   
+    plt.savefig(os.path.join(verbose_folder , 'CoupledCells_1way.png'))   
     plt.close('all')
+    
+    coupling_functions.plotGridfromCoords(PCRcoords, modelCoords_2way)
+    plt.savefig(os.path.join(verbose_folder , 'AllCells_2wayn.png'))
+    coupling_functions.plotGridfromCoords(CoupledCellsInfoAll_2way[1],CoupledCellsInfoAll_2way[0])
+    plt.savefig(os.path.join(verbose_folder , 'CoupledCells_2way.png'))   
+    plt.close('all')
+
+pdb.set_trace()
 
 # -------------------------------------------------------------------------------------------------
 # TURNING OFF CHANNELSTORAGE, WATERBODYSTORAGE, WATERBODIES AND RUNOFF TO CHANNELS

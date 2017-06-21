@@ -38,7 +38,7 @@ def set_values_in_array(vals, idx, update_vals):
 
 # =============================================================================
 
-def write2log(model_dir, model_file, latlon, use_2way, useFluxes, use_RFS, t_start, t_end = 0.):
+def write2log(model_dir, model_file, latlon, use_2way, useFluxes, use_RFS, t_start, verbose, t_end = 0.):
     """
     Writing model settings/paths/etc to a txt-file in directory.
     Note that PCR-GLOBWB is additionally writing its own log-file and Delft3D DFM adds model
@@ -64,15 +64,15 @@ def write2log(model_dir, model_file, latlon, use_2way, useFluxes, use_RFS, t_sta
     fo.write('\nmodel_file chosen: ')
     fo.write(model_file + os.linesep)
     fo.write('model start-time: ')
-    fo.write(str(t_start) + os.linesep)
+    fo.write(str(bool(t_start)) + os.linesep)
     fo.write('2way activated: ')
-    fo.write(str(use_2way) + os.linesep)
+    fo.write(str(bool(use_2way)) + os.linesep)
     fo.write('lat-lon activated: ')
-    fo.write(str(latlon) + os.linesep)
+    fo.write(str(bool(latlon)) + os.linesep)
     fo.write('forcing by fluxes activated: ') 
-    fo.write(str(useFluxes) + os.linesep)
+    fo.write(str(bool(useFluxes)) + os.linesep)
     fo.write('river-floodplain-scheme activated: ')
-    fo.write(str(use_RFS) + os.linesep)
+    fo.write(str(bool(use_RFS)) + os.linesep)
     fo.write('model end-time:')
     
     #-write end time of simulation finished when finished    
@@ -82,9 +82,11 @@ def write2log(model_dir, model_file, latlon, use_2way, useFluxes, use_RFS, t_sta
         print '### MODEL COUPLING STARTED ###'
         print '##############################'
         print '\nmodel file chosen: ', model_file
-        print 'lat-lon on: ', latlon
-        print 'fluxes on: ', useFluxes
-        print 'RFS on: ', use_RFS
+        print '2way coupling activated: ', bool(use_2way)
+        print 'lat-lon on: ', bool(latlon)
+        print 'fluxes on: ', bool(useFluxes)
+        print 'RFS on: ', bool(use_RFS)
+        print 'verbose mode on: ', verbose
         print '\nModel Start-Time: ', t_start
         print '\nVerbose Output and Log-File saved in: ', folder_name + os.linesep
         fo.write('... model still running ...')
@@ -140,8 +142,8 @@ def extractModelData_FM(model, model_pcr, landmask_pcr, clone_pcr, useRFS, use_2
     # for 2D part, x- and y-coords of corner points have to be allocated to cells
     elif useRFS == False:
 		modelCoords = coupling_functions.getFMcoords(cell_points_fm, x_coords, y_coords)
-	if use_2way == True:
-		modelCoords_2way = coupling_functions.getFMcoords(cell_points_fm, x_coords, y_coords)
+    if use_2way == True:
+        modelCoords_2way = coupling_functions.getFMcoords(cell_points_fm, x_coords, y_coords)
     elif use_2way == False:
         modelCoords_2way = []
 
