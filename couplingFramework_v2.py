@@ -235,8 +235,6 @@ if verbose == True:
     plt.savefig(os.path.join(verbose_folder , 'CoupledCells_2way.png'))   
     plt.close('all')
 
-pdb.set_trace()
-
 # -------------------------------------------------------------------------------------------------
 # TURNING OFF CHANNELSTORAGE, WATERBODYSTORAGE, WATERBODIES AND RUNOFF TO CHANNELS
 # -------------------------------------------------------------------------------------------------  
