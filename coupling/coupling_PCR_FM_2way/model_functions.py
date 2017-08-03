@@ -163,6 +163,8 @@ def extractModelData_FP(model, model_dir, model_pcr, landmask_pcr, clone_pcr, ve
     on model specification from initialized LISFLOOD-FP model to be used later in the model run.
     List of variables can be extended, but needs to be specified in 'lib_bmi.cpp' first with
     correct data type declaration.
+    
+    TO DO: get value specified as missing value in DEM automatically!
     """
 	
     BLx                      = model.get_var('blx') 			# x-coord of bottom left corner of grid
@@ -200,11 +202,14 @@ def extractModelData_FP(model, model_dir, model_pcr, landmask_pcr, clone_pcr, ve
     # if RFS active, mask LFP-cells only to those with channel data and without missing values
     if use_RFS == True:
         i, j = np.where(np.logical_and(SGCwidth > 0., DEM != -9999))
+        list_x_coords = grid_x_coords[i, j]
+        list_y_coords = grid_y_coords[i, j]
+        coupledFPindices = zip(i, j)
     elif use_RFS == False:
         i, j = np.where(DEM != -9999)
         list_x_coords = grid_x_coords[i, j]
         list_y_coords = grid_y_coords[i, j]
-        coupledFPindices = zip(i, j)
+        coupledFPindices = zip(i, j)    
     if use_2way == True:
         i, j = np.where(DEM != -9999)
         list_x_coords_2way = grid_x_coords[i, j]
@@ -223,7 +228,8 @@ def extractModelData_FP(model, model_dir, model_pcr, landmask_pcr, clone_pcr, ve
                 print grid_x_coords[i, j], grid_y_coords[i, j]
         print 'rows', rows
         print 'cols', cols
-        print 'number coupled FP-cells: ', len(coupledFPindices)
+        print 'number coupled FP-cells 1-D: ', len(coupledFPindices)
+        print 'number coupled FP-cells 2-D: ', len(coupledFPindices_2way)
         fig = plt.figure()
         plt.imshow(np.ma.masked_outside(DEM, -1000,1000), cmap='terrain')
         plt.colorbar()

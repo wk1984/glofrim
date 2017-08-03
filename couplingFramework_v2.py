@@ -49,6 +49,13 @@ Copyright (C) 2017 Jannis Hoch
 
 @author: Jannis Hoch, Department of Physical Geography, Faculty of Geosciences, Utrecht University (j.m.hoch@uu.nl)
 @date: 22-05-2017
+
+
+Progress status 2way-coupling:
+
+30 Jun 2016: 	implemented functionality to obtain two separate sets of coupled PCR-FM cells if RFS is on: one for PCR->FM1d, the other for FM2d->PCR;
+				if RFS is not on, it's only one array for the 2d-cells;
+				running GLOFRIM works
 """
 
 # -------------------------------------------------------------------------------------------------
@@ -239,6 +246,11 @@ if verbose == True:
 # TURNING OFF CHANNELSTORAGE, WATERBODYSTORAGE, WATERBODIES AND RUNOFF TO CHANNELS
 # -------------------------------------------------------------------------------------------------  
 
+'''
+TO DO: other PCR-variables required for 2way-coupling need to be activated!
+		be alert for which arrays this needs to happen, whehter for all PCR cells that are coupled or only those to which water is added from PCR!
+'''
+
 model_functions.noStorage(model_pcr, missing_value_pcr, CoupledPCRcellIndices, CouplePCR2model)
 
 # -------------------------------------------------------------------------------------------------
@@ -282,7 +294,7 @@ else:
 
 # reshaping data for LISFLOOD-FP from list to arrays
 if model_type == 'LFP':
-    delta_water_fm = model_functions.fillFPgrid(model_hydr, coupledFPindices, delta_water_fm, DEM, verbose_folder, verbose)
+    delta_water_fm = model_functions.fillLFPgrid(model_hydr, coupledFPindices, delta_water_fm, DEM, verbose_folder, verbose)
   
 # -------------------------------------------------------------------------------------------------
 # FIRST UPDATE (DAY 1)
@@ -327,7 +339,7 @@ while model_pcr.get_time_step() < nr_pcr_timesteps:
     
     # reshaping data for LISFLOOD-FP from list to arrays
     if model_type == 'LFP':
-        delta_water_fm = model_functions.fillFPgrid(model_hydr, coupledFPindices, delta_water_fm, DEM, verbose_folder, verbose)  
+        delta_water_fm = model_functions.fillLFPgrid(model_hydr, coupledFPindices, delta_water_fm, DEM, verbose_folder, verbose)  
     
     # updating arrays with computed additional volumes; array used depends on model specifications
     if (model_type == 'LFP'):
