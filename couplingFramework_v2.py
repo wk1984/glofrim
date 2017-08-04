@@ -101,6 +101,7 @@ if latlon == False:
 use_Fluxes = strtobool(config.general_settings['use_Fluxes'])
 use_RFS = strtobool(config.general_settings['use_RFS'])
 verbose = strtobool(config.general_settings['verbose'])
+use_floodplain_infiltration_factor = strtobool(config.general_settings['use_floodplain_infiltration_factor'])
 
 # -------------------------------------------------------------------------------------------------
 # SPECIFY NUMERICAL SETTINGS
@@ -163,7 +164,7 @@ else:
 # -------------------------------------------------------------------------------------------------
                                   
 # initiate logging and define folder for verbose-output
-verbose_folder = model_functions.write2log(model_dir, model_file, latlon, use_2way, use_Fluxes, use_RFS, verbose, moment='start')
+verbose_folder = model_functions.write2log(model_dir, model_file, latlon, use_2way, use_Fluxes, use_RFS, use_floodplain_infiltration_factor, verbose, moment='start')
 print 'Model Start-Time: ', datetime.datetime.now()
 print ''
 
@@ -237,21 +238,23 @@ if (verbose == True):
     plt.close('all')
     
     coupling_functions.plotGridfromCoords(PCRcoords, modelCoords_2way)
-    plt.savefig(os.path.join(verbose_folder , 'AllCells_2wayn.png'))
+    plt.savefig(os.path.join(verbose_folder , 'AllCells_2way.png'))
     coupling_functions.plotGridfromCoords(CoupledCellsInfoAll_2way[1],CoupledCellsInfoAll_2way[0])
     plt.savefig(os.path.join(verbose_folder , 'CoupledCells_2way.png'))   
     plt.close('all')
-
+    
 # -------------------------------------------------------------------------------------------------
 # TURNING OFF CHANNELSTORAGE, WATERBODYSTORAGE, WATERBODIES AND RUNOFF TO CHANNELS
-# -------------------------------------------------------------------------------------------------  
-
-'''
-TO DO: other PCR-variables required for 2way-coupling need to be activated!
-		be alert for which arrays this needs to happen, whehter for all PCR cells that are coupled or only those to which water is added from PCR!
-'''
+# ------------------------------------------------------------------------------------------------- 
 
 model_functions.noStorage(model_pcr, missing_value_pcr, CoupledPCRcellIndices, CouplePCR2model)
+
+# -------------------------------------------------------------------------------------------------
+# UPDATING A RANGE OF HYDROLOGIC VARIABLES
+# ------------------------------------------------------------------------------------------------- 
+
+#model_functions.updateHydrologicVariables(model_pcr, new_preventRunoffToDischarge, new_controlDynamicFracWat, new_waterBodyIdsAdjust, water_depths_floodplains_FM_2_PCR, \
+#            inundated_fraction_floodplains_FM_2_PCR, new_channelStorage_pcr, inundated_fraction_rivers_FM_2_PCR, new_controlFloodplainFactor, use_floodplain_infiltration_factor)
 
 # -------------------------------------------------------------------------------------------------
 # TURNING OFF ROUTING BY PCR IN COUPLED AREA
@@ -361,7 +364,7 @@ while model_pcr.get_time_step() < nr_pcr_timesteps:
 # ----------------------------------------------------------------------------------------------------
     
 # update and finalize logging
-model_functions.write2log(model_dir, model_file, latlon, use_2way, use_Fluxes, use_RFS, verbose, moment='end') 
+model_functions.write2log(model_dir, model_file, latlon, use_2way, use_Fluxes, use_RFS, use_floodplain_infiltration_factor, verbose, moment='end') 
 # close files
 if verbose == True:
     fo_PCR_V_tot.close()

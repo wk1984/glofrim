@@ -31,6 +31,8 @@ use_Fluxes 	= True
 use_RFS 	= True
 # specify verbosemode
 verbose 	= False
+# use floodplain infiltration factor
+use_floodplain_infiltration_factor = False
 
 [numerical_settings]
 # specify model timesteps

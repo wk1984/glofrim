@@ -39,7 +39,7 @@ def set_values_in_array(vals, idx, update_vals):
 
 # =============================================================================
 
-def write2log(model_dir, model_file, latlon, use_2way, useFluxes, use_RFS, verbose, moment):
+def write2log(model_dir, model_file, latlon, use_2way, useFluxes, use_RFS, use_floodplain_infiltration_factor, verbose, moment):
     """
     Writing model settings/paths/etc to a txt-file in directory.
     Note that PCR-GLOBWB is additionally writing its own log-file and Delft3D DFM adds model
@@ -63,6 +63,7 @@ def write2log(model_dir, model_file, latlon, use_2way, useFluxes, use_RFS, verbo
         print 'lat-lon on: ', bool(latlon)
         print 'fluxes on: ', bool(useFluxes)
         print 'RFS on: ', bool(use_RFS)
+        print 'use floodplain infiltration factor: ', bool(use_floodplain_infiltration_factor)
         print 'verbose mode on: ', bool(verbose)
         print '\nVerbose Output and Log-File saved in: ', folder_name + os.linesep
 		
@@ -330,30 +331,31 @@ def updateHydrologicVariables(model_pcr, new_preventRunoffToDischarge, new_contr
         model_pcr.set_var(('routing','controlDynamicFracWat'), new_controlDynamicFracWat)
         model_pcr.set_var(('WaterBodies', 'waterBodyIdsAdjust'), new_waterBodyIdsAdjust)
 
-    # add water from FM floodplains back to PCR
-    model_pcr.set_var(('grassland','floodplainWaterLayer'), water_depths_floodplains_FM_2_PCR)
-    model_pcr.set_var(('forest','floodplainWaterLayer'), water_depths_floodplains_FM_2_PCR)
+    elif model_pcr.get_current_timestep() > 1.:
+        # add water from FM floodplains back to PCR
+        model_pcr.set_var(('grassland','floodplainWaterLayer'), water_depths_floodplains_FM_2_PCR)
+        model_pcr.set_var(('forest','floodplainWaterLayer'), water_depths_floodplains_FM_2_PCR)
     
-    # set the variable for dealing with floodplain inundated area fraction in PCR
-    model_pcr.set_var(('grassland','inundatedFraction'), inundated_fraction_floodplains_FM_2_PCR)
-    model_pcr.set_var(('forest','inundatedFraction'), inundated_fraction_floodplains_FM_2_PCR)
+        # set the variable for dealing with floodplain inundated area fraction in PCR
+        model_pcr.set_var(('grassland','inundatedFraction'), inundated_fraction_floodplains_FM_2_PCR)
+        model_pcr.set_var(('forest','inundatedFraction'), inundated_fraction_floodplains_FM_2_PCR)
     
-    # add water from FM rivers back to PCR
-    model_pcr.set_var(('routing','channelStorage'), new_channelStorage_pcr)
+        # add water from FM rivers back to PCR
+        model_pcr.set_var(('routing','channelStorage'), new_channelStorage_pcr)
     
-    # set the variable for dealing with river (water bodies) area fraction in PCR
-    model_pcr.set_var(('routing','waterBodyFractionFM'), inundated_fraction_rivers_FM_2_PCR)
+        # set the variable for dealing with river (water bodies) area fraction in PCR
+        model_pcr.set_var(('routing','waterBodyFractionFM'), inundated_fraction_rivers_FM_2_PCR)
     
-    # floodplain scaling should only be changed using BMI if specified at model initialization
-    if use_floodplain_infiltration_factor == True:
+        # floodplain scaling should only be changed using BMI if specified at model initialization
+        if use_floodplain_infiltration_factor == True:
         
-        # activate the scaling factor functions
-        model_pcr.set_var(('forest','ActivateFactorInfiltrationFloodplain'), 'True')
-        model_pcr.set_var(('grassland','ActivateFactorInfiltrationFloodplain'), 'True')
+            # activate the scaling factor functions
+            model_pcr.set_var(('forest','ActivateFactorInfiltrationFloodplain'), 'True')
+            model_pcr.set_var(('grassland','ActivateFactorInfiltrationFloodplain'), 'True')
         
-        # set the variable controlling the floodplain infiltration scaling factor
-        model_pcr.set_var(('forest','controlFloodplainFactor'), new_controlFloodplainFactor)
-        model_pcr.set_var(('grassland','controlFloodplainFactor'), new_controlFloodplainFactor)
+            # set the variable controlling the floodplain infiltration scaling factor
+            model_pcr.set_var(('forest','controlFloodplainFactor'), new_controlFloodplainFactor)
+            model_pcr.set_var(('grassland','controlFloodplainFactor'), new_controlFloodplainFactor)
     
     return
     
