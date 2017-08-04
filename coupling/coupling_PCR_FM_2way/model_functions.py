@@ -14,6 +14,7 @@ Development for 2way-coupling is ongoing.
 """
 
 import numpy as np
+import datetime
 import os
 import pdb
 import sys
@@ -38,45 +39,21 @@ def set_values_in_array(vals, idx, update_vals):
 
 # =============================================================================
 
-def write2log(model_dir, model_file, latlon, use_2way, useFluxes, use_RFS, t_start, verbose, t_end = 0.):
+def write2log(model_dir, model_file, latlon, use_2way, useFluxes, use_RFS, verbose, moment):
     """
     Writing model settings/paths/etc to a txt-file in directory.
     Note that PCR-GLOBWB is additionally writing its own log-file and Delft3D DFM adds model
     diagnosis and settings to the dia-file.
     Also verbose-output (if verbose == True) is stored in the created directory.
+    
+    TO DO: avoid printing of model settings at end of run if not total number of timesteps is specified in set-file
     """
     
-    #- creating folder to store verbose and log output in    
+    #- creating folder to store verbose and log output
     folder_name = model_dir + model_file + '_verboseOut'
-    
-    #- check whether folder has already been created in a previous run
-    if os.path.exists(folder_name):
-        pass
-    else:
-        #- create folder if not yet existing
-        os.mkdir(folder_name)
         
-    #- create log-file    
-    fo_name = model_file + '_CouplingLog.txt'    
-    fo = open((os.path.join(folder_name, fo_name)),'w') 
-    
-    #- write info to log-file    
-    fo.write('\nmodel_file chosen: ')
-    fo.write(model_file + os.linesep)
-    fo.write('model start-time: ')
-    fo.write(str(bool(t_start)) + os.linesep)
-    fo.write('2way activated: ')
-    fo.write(str(bool(use_2way)) + os.linesep)
-    fo.write('lat-lon activated: ')
-    fo.write(str(bool(latlon)) + os.linesep)
-    fo.write('forcing by fluxes activated: ') 
-    fo.write(str(bool(useFluxes)) + os.linesep)
-    fo.write('river-floodplain-scheme activated: ')
-    fo.write(str(bool(use_RFS)) + os.linesep)
-    fo.write('model end-time:')
-    
     #-write end time of simulation finished when finished    
-    if t_end == 0.:
+    if moment == 'start':
         #- print info to console at start of simulation
         print '\n##############################'
         print '### MODEL COUPLING STARTED ###'
@@ -87,12 +64,34 @@ def write2log(model_dir, model_file, latlon, use_2way, useFluxes, use_RFS, t_sta
         print 'fluxes on: ', bool(useFluxes)
         print 'RFS on: ', bool(use_RFS)
         print 'verbose mode on: ', bool(verbose)
-        print '\nModel Start-Time: ', t_start
         print '\nVerbose Output and Log-File saved in: ', folder_name + os.linesep
-        fo.write('... model still running ...')
-    else:
-        fo.write(str(t_end) + os.linesep)
-        print 'model end-time: ', str(t_end)
+		
+    elif moment == 'end':
+        #- check if folder has already been created
+        if os.path.exists(folder_name):
+            pass
+        else:
+            os.mkdir(folder_name)
+			
+		#- crate log-file
+        fo_name = model_file + '_couplingLog.txt'
+        fo = open((os.path.join(folder_name, fo_name)),'w')
+		
+        #- write info to log-file
+        fo.write('\nmodel_file chosen: ')
+        fo.write(model_file + os.linesep)
+        fo.write('model start-time: ')
+        fo.write(str(datetime.datetime.now()) + os.linesep)
+        fo.write('2way activated: ')
+        fo.write(str(bool(use_2way)) + os.linesep)
+        fo.write('lat-lon activated: ')
+        fo.write(str(bool(latlon)) + os.linesep)
+        fo.write('forcing by fluxes activated: ')
+        fo. write(str(bool(useFluxes)) + os.linesep)
+        fo.write('river-floodplain-scheme activated: ')
+        fo.write(str(bool(use_RFS)) + os.linesep)
+        fo.write('model end-time:')
+        fo.write(str(datetime.datetime.now()) + os.linesep)
 		#- close log-file    
         fo.close()
     

@@ -1,4 +1,4 @@
-# GLOFRIM
+# GLOFRIM v2.0
 Globally Applicable Framework for Integrated Hydrological-Hydrodynamic Modelling (GLOFRIM)
 
 # Important Note
@@ -61,7 +61,7 @@ For questions, lessons learnt, experiences made or if any problems are encounter
 # Running the script:
 To run the script, an set-file containing the required specifications and paths is necessary.
 Using python, run this file along with the set-file as follows:
-	python couplingFramework_v1.py default.set
+	python couplingFramework_v2.py default.set
 	
 # Disclaimer:
 This program is free software: you can redistribute it and/or modify

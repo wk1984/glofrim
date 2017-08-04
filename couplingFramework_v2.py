@@ -74,8 +74,8 @@ import numpy as np
 import pyproj as pyproj
 import datetime
 import bmi.wrapper
-import pcrglobwb_bmi_v203 as pcrglobwb_bmi_v203
-from pcrglobwb_bmi_v203 import pcrglobwb_bmi
+import pcrglobwb_203_30min_2way as pcrglobwb_bmi_v203
+from pcrglobwb_203_30min_2way import pcrglobwb_bmi
 from coupling_PCR_FM_2way import coupling_functions
 from coupling_PCR_FM_2way import model_functions
 from coupling_PCR_FM_2way import configuration
@@ -162,10 +162,10 @@ else:
 # INITIALIZE AND SPIN-UP PCR-GLOBWB
 # -------------------------------------------------------------------------------------------------
                                   
-# get start time of simulation
-t_start = datetime.datetime.now()
 # initiate logging and define folder for verbose-output
-verbose_folder = model_functions.write2log(model_dir, model_file, latlon, use_2way, use_Fluxes, use_RFS, t_start, verbose)
+verbose_folder = model_functions.write2log(model_dir, model_file, latlon, use_2way, use_Fluxes, use_RFS, verbose, moment='start')
+print 'Model Start-Time: ', datetime.datetime.now()
+print ''
 
 # initiate PCR-GLOBWB
 model_pcr = pcrglobwb_bmi_v203.pcrglobwb_bmi.pcrglobwbBMI()
@@ -360,10 +360,8 @@ while model_pcr.get_time_step() < nr_pcr_timesteps:
 # END OF MODEL PERIOD REACHED
 # ----------------------------------------------------------------------------------------------------
     
-# get end time of simulation
-t_end = datetime.datetime.now()
 # update and finalize logging
-model_functions.write2log(model_dir, model_file, latlon, use_Fluxes, use_RFS, t_start, verbose, t_end) 
+model_functions.write2log(model_dir, model_file, latlon, use_2way, use_Fluxes, use_RFS, verbose, moment='end') 
 # close files
 if verbose == True:
     fo_PCR_V_tot.close()
@@ -371,3 +369,4 @@ if verbose == True:
 
 #- finalizing hydrodynamic model to properly end execution
 model_hydr.finalize()
+print '\nModel End-Time: ', datetime.datetime.now()
