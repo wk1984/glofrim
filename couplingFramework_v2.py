@@ -228,7 +228,7 @@ elif use_2way == True:
 
 # saving plots of coupled cells to verbose-folder
 # currently doesn't work with FM and use_RFS on, due to data structure required (? check this ?)
-if verbose == True: 
+if (verbose == True): 
 	
     coupling_functions.plotGridfromCoords(PCRcoords, modelCoords)
     plt.savefig(os.path.join(verbose_folder , 'AllCells_1way.png'))

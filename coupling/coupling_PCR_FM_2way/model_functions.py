@@ -305,12 +305,56 @@ def noStorage(model_pcr, missing_value_pcr, CoupledPCRcellIndices, CouplePCR2mod
     new_preventRunoffToDischarge = set_values_in_array(new_preventRunoffToDischarge, CoupledPCRcellIndices, 0.)
 
     # activating coupling for relevant sections
+    model_pcr.set_var(('grassland','ActivateCoupling'), 'True') #2way
+    model_pcr.set_var(('forest','ActivateCoupling'), 'True') #2way
     model_pcr.set_var(('routing','ActivateCoupling'), 'True')
     model_pcr.set_var(('WaterBodies', 'ActivateCoupling'), 'True')
     
     # overwriting variables with new values
     model_pcr.set_var('channelStorage', new_channel_storage_pcr, missing_value_pcr)
     model_pcr.set_var(('routing','waterBodyStorage'), new_waterbody_storage_pcr)
+    
+    return
+    
+# =============================================================================
+    
+def updateHydrologicVariables(model_pcr, new_preventRunoffToDischarge, new_controlDynamicFracWat, new_waterBodyIdsAdjust, water_depths_floodplains_FM_2_PCR, \
+            inundated_fraction_floodplains_FM_2_PCR, new_channelStorage_pcr, inundated_fraction_rivers_FM_2_PCR, new_controlFloodplainFactor, use_floodplain_infiltration_factor):
+    """
+    This functions update variables in the hydrologic models based on hydrodynamics
+    """
+    # adjusting maps controlling the locations where certain PCR variables should be updated
+    # NOTE: THIS ONLY HAS TO BE DONE ONCE!
+    if model_pcr.get_current_timestep() == 1.:
+        model_pcr.set_var(('routing','preventRunoffToDischarge'), new_preventRunoffToDischarge)
+        model_pcr.set_var(('routing','controlDynamicFracWat'), new_controlDynamicFracWat)
+        model_pcr.set_var(('WaterBodies', 'waterBodyIdsAdjust'), new_waterBodyIdsAdjust)
+
+    # add water from FM floodplains back to PCR
+    model_pcr.set_var(('grassland','floodplainWaterLayer'), water_depths_floodplains_FM_2_PCR)
+    model_pcr.set_var(('forest','floodplainWaterLayer'), water_depths_floodplains_FM_2_PCR)
+    
+    # set the variable for dealing with floodplain inundated area fraction in PCR
+    model_pcr.set_var(('grassland','inundatedFraction'), inundated_fraction_floodplains_FM_2_PCR)
+    model_pcr.set_var(('forest','inundatedFraction'), inundated_fraction_floodplains_FM_2_PCR)
+    
+    # add water from FM rivers back to PCR
+    model_pcr.set_var(('routing','channelStorage'), new_channelStorage_pcr)
+    
+    # set the variable for dealing with river (water bodies) area fraction in PCR
+    model_pcr.set_var(('routing','waterBodyFractionFM'), inundated_fraction_rivers_FM_2_PCR)
+    
+    # floodplain scaling should only be changed using BMI if specified at model initialization
+    if use_floodplain_infiltration_factor == True:
+        
+        # activate the scaling factor functions
+        model_pcr.set_var(('forest','ActivateFactorInfiltrationFloodplain'), 'True')
+        model_pcr.set_var(('grassland','ActivateFactorInfiltrationFloodplain'), 'True')
+        
+        # set the variable controlling the floodplain infiltration scaling factor
+        model_pcr.set_var(('forest','controlFloodplainFactor'), new_controlFloodplainFactor)
+        model_pcr.set_var(('grassland','controlFloodplainFactor'), new_controlFloodplainFactor)
+    
     return
     
 # =============================================================================
