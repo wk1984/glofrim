@@ -254,13 +254,20 @@ if (verbose == True):
 model_functions.noStorage(model_pcr, missing_value_pcr, CoupledPCRcellIndices, CouplePCR2model)
 
 # -------------------------------------------------------------------------------------------------
-# UPDATING A RANGE OF HYDROLOGIC VARIABLES
+# ACTIVATING A RANGE OF VARIABLES SPECIFICALLY REQUIRED FOR 2WAY-COUPLING
+# -------------------------------------------------------------------------------------------------
+
+new_preventRunoffToDischarge, new_controlDynamicFracWat, new_waterBodyIdsAdjust, water_depths_FM_2_PCR \ 
+         = model_functions.activate2wayVariables(model_pcr, CoupledPCRcellIndices, CouplePCR2FM)
+
+# -------------------------------------------------------------------------------------------------
+# UPDATING A RANGE OF VARIABLES SPECIFICALLY REQUIRED FOR 2WAY-COUPLING
 # ------------------------------------------------------------------------------------------------- 
 """
 TO DO: get all required variables and how their are determined from Arjen's original code
 """
-#model_functions.updateHydrologicVariables(model_pcr, new_preventRunoffToDischarge, new_controlDynamicFracWat, new_waterBodyIdsAdjust, water_depths_floodplains_FM_2_PCR, \
-#            inundated_fraction_floodplains_FM_2_PCR, new_channelStorage_pcr, inundated_fraction_rivers_FM_2_PCR, new_controlFloodplainFactor, use_floodplain_infiltration_factor)
+#model_functions.updateHydrologicVariables(model_pcr, new_preventRunoffToDischarge, new_controlDynamicFracWat, new_waterBodyIdsAdjust, water_depths_FM_2_PCR, \
+#            inundated_fraction_FM_2_PCR, new_channelStorage_pcr, inundated_fraction_rivers_FM_2_PCR, new_controlFloodplainFactor, use_floodplain_infiltration_factor)
 
 # -------------------------------------------------------------------------------------------------
 # TURNING OFF ROUTING BY PCR IN COUPLED AREA

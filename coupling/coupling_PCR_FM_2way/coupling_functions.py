@@ -4,6 +4,8 @@ Set of functions related to the coupling of PCR-GLOBWB with Delft 3D Flexible Me
 Unlike the "model_functions" where primarily the translation of water volumes is computed, the subsequent set
 of functions is used to spatially couple the grids of the models.
 
+TO DO: add function getZeroMapArray from an earlier version!!!
+
 @author: Jannis Hoch, Department of Physical Geography, Geosciences, Utrecht University (j.m.hoch@uu.nl)
 @date: 20-03-2017
 """

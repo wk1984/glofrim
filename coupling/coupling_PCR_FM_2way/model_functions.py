@@ -282,15 +282,47 @@ def fillLFPgrid(model, indices_list, value_list, array_in, verbose_folder, verbo
     
 # =============================================================================
 
-def activate2wayVariables(model_pcr, CoupledPCRcellIndices):
+def activate2wayVariables(model, model_pcr, CoupledPCRcellIndices, CoupledPCR2FM):
+	"""
+	TO DO: double-check whether the PCR2FM or the 2way-arrays should be used here?
+	TO DO: where does the inundated area come from?
+	"""
 	
     # get variable/map from PCR
     new_preventRunoffToDischarge = model_pcr.get_var('preventRunoffToDischarge')
+    new_controlDynamicFracWat = model_pcr.get_var('controlDynamicFracWat')
+    new_waterBodyIdsAdjust = model_pcr.get_var(('WaterBodies', 'waterBodyIdsAdjust'))
 
     # adjust variable/map so it contains zeros at coupled cell locations
     new_preventRunoffToDischarge = set_values_in_array(new_preventRunoffToDischarge, CoupledPCRcellIndices, 0.)
+    new_controlDynamicFracWat = set_values_in_array(new_controlDynamicFracWat, CoupledPCRcellIndices, 0.)
+    new_waterBodyIdsAdjust = set_values_in_array(new_waterBodyIdsAdjust, CoupledPCRcellIndices, 0.)
     
-    return new_preventRunoffToDischarge
+    # get water volume of all FM cells
+    current_volume_fm = model.get_var('vol1')
+    
+    # create zero array for filling in total volumes and water depths for each coupled PCR cell
+    water_volume_FM_2_PCR_coupled = np.zeros(len(CouplePCR2FM))
+    water_depths_FM_2_PCR_coupled = np.zeros(len(CouplePCR2FM))
+    # create zero array of appropriate size for using BMI function 'set_var'
+    water_depths_FM_2_PCR = coupling_functions.zeroMapArray(landmask_pcr, missingValuesMap=missing_value_landmask)
+    
+    # loop over all coupled PCR cells and fill in and/or calculate values
+    for i in range(len(CouplePCR2FM)):
+		# get total volume of all FM cells coupled to current PCR cell
+        water_volume_FM_2_PCR_coupled[i] = np.sum(current_volume_fm[CouplePCR2FM[i][1]])
+        # divide total volume by inundated FM area to obtain water depth
+        if inundated_area_FM_2_PCR_coupled[i] > 0. :
+            water_depths_FM_2_PCR_coupled[i] = water_volume_FM_2_PCR_coupled[i] / inundated_area_FM_2_PCR_coupled[i]
+        else:
+            water_depths_floodplains_FM_2_PCR_coupled[i] = 0.
+        # assign value of current cell to zero array to be used with BMI
+        water_depths_FM_2_PCR[CoupledPCRcellIndices[i]] = water_depths_FM_2_PCR_coupled[i]
+
+ 
+    
+    return new_preventRunoffToDischarge, new_controlDynamicFracWat, new_waterBodyIdsAdjust, water_depths_FM_2_PCR 
+    
     
 # =============================================================================
     
@@ -305,14 +337,11 @@ def noStorage(model_pcr, missing_value_pcr, CoupledPCRcellIndices, CouplePCR2mod
     # get required variables from PCR-GLOBWB
     current_channel_storage_pcr     = model_pcr.get_var('channelStorage')
     current_waterbody_storage_pcr   = model_pcr.get_var(('routing', 'waterBodyStorage'))
-    new_waterBodyIdsAdjust          = model_pcr.get_var(('WaterBodies', 'waterBodyIdsAdjust'))
     
     # no channel storage    
     new_channel_storage_pcr = set_values_in_array(current_channel_storage_pcr, CoupledPCRcellIndices, 0.)
     # # no waterbody storage
-    new_waterbody_storage_pcr = set_values_in_array(current_waterbody_storage_pcr, CoupledPCRcellIndices, 0.)
-    # # Create map that turns PCR water bodies off for coupled cells
-    new_waterBodyIdsAdjust = set_values_in_array(new_waterBodyIdsAdjust, CoupledPCRcellIndices, 0.)
+    new_waterbody_storage_pcr = set_values_in_array(current_waterbody_storage_pcr, CoupledPCRcellIndices, 0.)    
 
     # activating coupling for relevant sections
     model_pcr.set_var(('grassland','ActivateCoupling'), 'True') #2way
