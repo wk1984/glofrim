@@ -53,7 +53,11 @@ Copyright (C) 2017 Jannis Hoch
 
 Progress status 2way-coupling:
 
-30 Jun 2016: 	implemented functionality to obtain two separate sets of coupled PCR-FM cells if RFS is on: one for PCR->FM1d, the other for FM2d->PCR;
+09 Aug 2017:	added functionality to activate floodplain infiltration factor
+				made changes to logging and printing to console
+				successfully ran current version of 2way coupling for NIG, AMA, and LFP_NIG
+
+30 Jun 2017: 	implemented functionality to obtain two separate sets of coupled PCR-FM cells if RFS is on: one for PCR->FM1d, the other for FM2d->PCR;
 				if RFS is not on, it's only one array for the 2d-cells;
 				running GLOFRIM works
 """
@@ -252,7 +256,9 @@ model_functions.noStorage(model_pcr, missing_value_pcr, CoupledPCRcellIndices, C
 # -------------------------------------------------------------------------------------------------
 # UPDATING A RANGE OF HYDROLOGIC VARIABLES
 # ------------------------------------------------------------------------------------------------- 
-
+"""
+TO DO: get all required variables and how their are determined from Arjen's original code
+"""
 #model_functions.updateHydrologicVariables(model_pcr, new_preventRunoffToDischarge, new_controlDynamicFracWat, new_waterBodyIdsAdjust, water_depths_floodplains_FM_2_PCR, \
 #            inundated_fraction_floodplains_FM_2_PCR, new_channelStorage_pcr, inundated_fraction_rivers_FM_2_PCR, new_controlFloodplainFactor, use_floodplain_infiltration_factor)
 

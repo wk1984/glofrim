@@ -281,6 +281,18 @@ def fillLFPgrid(model, indices_list, value_list, array_in, verbose_folder, verbo
     return filled_map
     
 # =============================================================================
+
+def activate2wayVariables(model_pcr, CoupledPCRcellIndices):
+	
+    # get variable/map from PCR
+    new_preventRunoffToDischarge = model_pcr.get_var('preventRunoffToDischarge')
+
+    # adjust variable/map so it contains zeros at coupled cell locations
+    new_preventRunoffToDischarge = set_values_in_array(new_preventRunoffToDischarge, CoupledPCRcellIndices, 0.)
+    
+    return new_preventRunoffToDischarge
+    
+# =============================================================================
     
 def noStorage(model_pcr, missing_value_pcr, CoupledPCRcellIndices, CouplePCR2model):
     """
@@ -294,7 +306,6 @@ def noStorage(model_pcr, missing_value_pcr, CoupledPCRcellIndices, CouplePCR2mod
     current_channel_storage_pcr     = model_pcr.get_var('channelStorage')
     current_waterbody_storage_pcr   = model_pcr.get_var(('routing', 'waterBodyStorage'))
     new_waterBodyIdsAdjust          = model_pcr.get_var(('WaterBodies', 'waterBodyIdsAdjust'))
-    new_preventRunoffToDischarge    = model_pcr.get_var('preventRunoffToDischarge')
     
     # no channel storage    
     new_channel_storage_pcr = set_values_in_array(current_channel_storage_pcr, CoupledPCRcellIndices, 0.)
@@ -302,8 +313,6 @@ def noStorage(model_pcr, missing_value_pcr, CoupledPCRcellIndices, CouplePCR2mod
     new_waterbody_storage_pcr = set_values_in_array(current_waterbody_storage_pcr, CoupledPCRcellIndices, 0.)
     # # Create map that turns PCR water bodies off for coupled cells
     new_waterBodyIdsAdjust = set_values_in_array(new_waterBodyIdsAdjust, CoupledPCRcellIndices, 0.)
-    # # Create map to prevent runoff from entering channels at coupled cells
-    new_preventRunoffToDischarge = set_values_in_array(new_preventRunoffToDischarge, CoupledPCRcellIndices, 0.)
 
     # activating coupling for relevant sections
     model_pcr.set_var(('grassland','ActivateCoupling'), 'True') #2way
