@@ -233,14 +233,18 @@ elif use_2way == True:
 
 # saving plots of coupled cells to verbose-folder
 # currently doesn't work with FM and use_RFS on, due to data structure required (? check this ?)
-if (verbose == True): 
-	
+if (verbose == True) and (use_2way == False):
     coupling_functions.plotGridfromCoords(PCRcoords, modelCoords)
     plt.savefig(os.path.join(verbose_folder , 'AllCells_1way.png'))
     coupling_functions.plotGridfromCoords(CoupledCellsInfoAll[1],CoupledCellsInfoAll[0])
     plt.savefig(os.path.join(verbose_folder , 'CoupledCells_1way.png'))   
     plt.close('all')
-    
+elif (verbose == True) and (use_2way = True):
+    coupling_functions.plotGridfromCoords(PCRcoords, modelCoords)
+    plt.savefig(os.path.join(verbose_folder , 'AllCells_1way.png'))
+    coupling_functions.plotGridfromCoords(CoupledCellsInfoAll[1],CoupledCellsInfoAll[0])
+    plt.savefig(os.path.join(verbose_folder , 'CoupledCells_1way.png'))   
+    plt.close('all')    
     coupling_functions.plotGridfromCoords(PCRcoords, modelCoords_2way)
     plt.savefig(os.path.join(verbose_folder , 'AllCells_2way.png'))
     coupling_functions.plotGridfromCoords(CoupledCellsInfoAll_2way[1],CoupledCellsInfoAll_2way[0])
@@ -261,7 +265,7 @@ new_preventRunoffToDischarge, new_controlDynamicFracWat, new_waterBodyIdsAdjust 
          = model_functions.activate2wayVariables(model_pcr, CoupledPCRcellIndices, CouplePCR2model)
          
 inundated_area_FM_2_PCR_coupled, inundated_fraction_FM_2_PCR =  
-    determine_InundationArea_Hydrodynamics(CoupledPCR2model_2way, CoupledPCRcellIndices_2way, threshold_inundated_depth_floodplains, cellAreaSpherical, cellarea_data_pcr)
+    determine_InundationArea_Hydrodynamics(CouplePCR2model_2way, CoupledPCRcellIndices_2way, threshold_inundated_depth_floodplains, cellAreaSpherical, cellarea_data_pcr)
          
 water_depths_FM_2_PCR = determine_InundationDepth_Hydrodynamics(model_hydr, landmask_pcr, inundated_area_FM_2_PCR_coupled, CoupledPCRcellIndices_2way, CouplePCR2model_2way)
 
