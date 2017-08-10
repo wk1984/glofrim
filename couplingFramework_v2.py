@@ -86,7 +86,7 @@ from coupling_PCR_FM_2way import configuration
 import pdb
 
 # -------------------------------------------------------------------------------------------------
-# IMPORT MODEL SETTINGS FROM INI-FILE
+# IMPORT MODEL SETTINGS FROM INI-FILE/SET-FILE
 # -------------------------------------------------------------------------------------------------
 
 config = configuration.Configuration()
