@@ -240,7 +240,7 @@ else:
 		coupling_functions.plotGridfromCoords(CoupledCellsInfoAll[1],CoupledCellsInfoAll[0])
 		plt.savefig(os.path.join(verbose_folder , 'CoupledCells_1way.png'))   
 		plt.close('all')
-	elif (verbose == True) and (use_2way = True):
+	elif (verbose == True) and (use_2way == True):
 		coupling_functions.plotGridfromCoords(PCRcoords, modelCoords)
 		plt.savefig(os.path.join(verbose_folder , 'AllCells_1way.png'))
 		coupling_functions.plotGridfromCoords(CoupledCellsInfoAll[1],CoupledCellsInfoAll[0])
@@ -268,29 +268,25 @@ model_functions.noLDD(model_pcr, CoupledPCRcellIndices, verbose_folder, verbose)
 # ACTIVATING A RANGE OF VARIABLES SPECIFICALLY REQUIRED FOR 2WAY-COUPLING
 # -------------------------------------------------------------------------------------------------
 
-<<<<<<< HEAD
 new_preventRunoffToDischarge, new_controlDynamicFracWat, new_waterBodyIdsAdjust = model_functions.activate2wayVariables(model_pcr, CoupledPCRcellIndices)
          
-inundated_area_FM_2_PCR_coupled, inundated_fraction_FM_2_PCR =  model_functions.determine_InundationArea_Hydrodynamics(model_type, model_hydr, CouplePCR2model_2way, CoupledPCRcellIndices_2way, threshold_inundated_depth_floodplains, cellAreaSpherical, cellarea_data_pcr, landmask_pcr, missing_value_landmask)
+inundated_area_FM_2_PCR_coupled, inundated_fraction_FM_2_PCR =  model_functions.determine_InundationArea_Hydrodynamics(model_type, model_hydr, CouplePCR2model_2way, CoupledPCRcellIndices_2way, threshold_inundated_depth, cellAreaSpherical, cellarea_data_pcr, landmask_pcr, missing_value_landmask)
          
 water_depths_FM_2_PCR = model_functions.determine_InundationDepth_Hydrodynamics(model_type, model_hydr, grid_dA, landmask_pcr, missing_value_landmask, inundated_area_FM_2_PCR_coupled, CouplePCR2model_2way, CoupledPCRcellIndices_2way)
-=======
-new_preventRunoffToDischarge, new_controlDynamicFracWat, new_waterBodyIdsAdjust \ 
-         = model_functions.activate2wayVariables(model_pcr, CoupledPCRcellIndices, CouplePCR2model)
+
+new_preventRunoffToDischarge, new_controlDynamicFracWat, new_waterBodyIdsAdjust = model_functions.activate2wayVariables(model_pcr, CoupledPCRcellIndices, CouplePCR2model)
 		 
 # -------------------------------------------------------------------------------------------------
 # DETERMINING INUNDATED AREA IN HYDRODYNAMIC MODEL AND ITS FRACTION WITH PCR-CELL
 # -------------------------------------------------------------------------------------------------
          
-inundated_area_FM_2_PCR_coupled, inundated_fraction_FM_2_PCR =  
-    determine_InundationArea_Hydrodynamics(CouplePCR2model_2way, CoupledPCRcellIndices_2way, threshold_inundated_depth, cellAreaSpherical, cellarea_data_pcr)
+inundated_area_FM_2_PCR_coupled, inundated_fraction_FM_2_PCR = determine_InundationArea_Hydrodynamics(CouplePCR2model_2way, CoupledPCRcellIndices_2way, threshold_inundated_depth, cellAreaSpherical, cellarea_data_pcr)
 
 # -------------------------------------------------------------------------------------------------
 # DETERMINING INUNDATION DEPTH IN HYDRODYNAMIC MODEL
 # -------------------------------------------------------------------------------------------------
 	
 water_depths_FM_2_PCR = determine_InundationDepth_Hydrodynamics(model_hydr, landmask_pcr, inundated_area_FM_2_PCR_coupled, CoupledPCRcellIndices_2way, CouplePCR2model_2way)
->>>>>>> fab2591d1474402ad3ab8d87ff6195879fade292
 
 # -------------------------------------------------------------------------------------------------
 # UPDATING A RANGE OF VARIABLES SPECIFICALLY REQUIRED FOR 2WAY-COUPLING
