@@ -233,7 +233,7 @@ elif use_2way == True:
 # currently doesn't work with FM and use_RFS on, due to data structure required (? check this ?)
 if (model_type == 'DFM') and (use_RFS == True):
     pass
-elif:
+else:
 	if (verbose == True) and (use_2way == False):
 		coupling_functions.plotGridfromCoords(PCRcoords, modelCoords)
 		plt.savefig(os.path.join(verbose_folder , 'AllCells_1way.png'))
