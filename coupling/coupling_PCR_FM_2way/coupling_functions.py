@@ -752,5 +752,25 @@ def plotGridfromCoords(coordsGrid1, coordsGrid2=None, linewidthGrid1=1, linewidt
     # adjust scale
     ax.autoscale()
 	
+# =============================================================================
 
-
+def zeroMapArray(PCRmap, missingValuesOutput=-999, missingValuesMap=255):
+	"""
+    Creates a numpy array with zero values at every map location with no missing value. This can be used to fill in data that will be extracted from a model.
+    
+    Input:  - PCR map showing location of (non-)missing values (e.g. landmask)
+            - missing values for output numpy array (optional, default at -999)
+            - missing values of map (optional, default = 255 for landmask)
+            
+    Output: numpy array with zero values at non-missing values of map and output missing values at missing values of map
+    """
+	reference_map    = pcr.readmap(PCRmap)
+	reference_map_np = pcr.pcr2numpy(reference_map, missingValuesMap)
+	output_map_np    = np.zeros([len(reference_map_np), len(reference_map_np[0])])
+    
+	for i in range(len(reference_map_np)):
+		for j in range(len(reference_map_np[0])):
+			if reference_map_np[i][j] == missingValuesMap:
+				output_map_np[i][j] = missingValuesOutput
+            
+	return output_map_np
