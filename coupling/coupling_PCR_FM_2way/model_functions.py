@@ -106,6 +106,8 @@ def extractModelData_FM(model, model_pcr, landmask_pcr, clone_pcr, useRFS, use_2
     on model specification from initialized Delft3D FM model to be used later in the model run.
     There is a wider range of flexible mesh variables exposed which can be made use of
     if required. The number of variables exposed depends on DFM version in use.
+    
+    TO DO: for 2way coupling, also cellAreaSpherical etc needs to be available in two separate variables!!!
     """
 	
     cell_points_fm           = model.get_var('flowelemnode')	# list with number of 2D cell points
@@ -324,6 +326,7 @@ def determine_InundationArea_Hydrodynamics(model_type, model_hydr, CouplePCR2mod
 			# check if water depth of current FM cell is above chosen threshold
 			if current_water_depth_fm[current_FM_cell_index] > threshold_inundated_depth:
 				# if so, add cell area to temporary variable
+				pdb.set_trace()
 				temp_inundated_area_FM += FMcellAreaSpherical[current_FM_cell_index]
 		# at end of loop, assign temporary variable to array storing inundated areas
 		inundated_area_FM_2_PCR_coupled[i] = temp_inundated_area_FM
