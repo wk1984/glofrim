@@ -582,24 +582,28 @@ f, ax = plt.subplots(1, 1)
 coupling_functions.plotGridValues(ax, PCRcoords, new_waterBodyStorage_with_mv, model_name='PCR', cell_cmap=my_cmap, \
                                   extend_colorbar='both')
 
-if adjust_initial_groundwater == 1:
-    # load groundwater recharge data from text file
-    GW_average_recharge = np.loadtxt(GW_recharge_pcr)
-    # get recession coefficient using BMI
-    GW_coefficient      = model_pcr.get_var('recessionCoeff')
-    # calculate initial groundwater stores
-    GW_initial_stores   = GW_average_recharge / GW_coefficient
-    # get current groundwater storage using BMI
-    GW_current_storage  = model_pcr.get_var('storGroundwater')
-    # create an array that will be used to set the new groundwater storage
-    GW_new_storage      = np.copy(GW_current_storage)
-    # adjust this array, using the maximum value of the current and new initial stores
-    for i in range(len(CoupledPCRcellIndices)):
-        if GW_current_storage[CoupledPCRcellIndices[i]] != -999:
-            if GW_initial_stores[CoupledPCRcellIndices[i]] > GW_current_storage[CoupledPCRcellIndices[i]]:
-                GW_new_storage[CoupledPCRcellIndices[i]] = GW_initial_stores[CoupledPCRcellIndices[i]]
-    # set this into the model using BMI
-    model_pcr.set_var('storGroundwater', GW_new_storage)
+###--- added to new function "adjust_iniGR" ---###
+#
+#if adjust_initial_groundwater == 1:
+#    # load groundwater recharge data from text file
+#    GW_average_recharge = np.loadtxt(GW_recharge_pcr)
+#    # get recession coefficient using BMI
+#    GW_coefficient      = model_pcr.get_var('recessionCoeff')
+#    # calculate initial groundwater stores
+#    GW_initial_stores   = GW_average_recharge / GW_coefficient
+#    # get current groundwater storage using BMI
+#    GW_current_storage  = model_pcr.get_var('storGroundwater')
+#    # create an array that will be used to set the new groundwater storage
+#    GW_new_storage      = np.copy(GW_current_storage)
+#    # adjust this array, using the maximum value of the current and new initial stores
+#    for i in range(len(CoupledPCRcellIndices)):
+#        if GW_current_storage[CoupledPCRcellIndices[i]] != -999:
+#            if GW_initial_stores[CoupledPCRcellIndices[i]] > GW_current_storage[CoupledPCRcellIndices[i]]:
+#                GW_new_storage[CoupledPCRcellIndices[i]] = GW_initial_stores[CoupledPCRcellIndices[i]]
+#    # set this into the model using BMI
+#    model_pcr.set_var('storGroundwater', GW_new_storage)
+#    
+###--- added to new function "adjust_iniGR" ---###
 
 # Adjusting the LDD to have a pit at every coupled cell, to make sure discharge values are not fed into FM multiple times
 

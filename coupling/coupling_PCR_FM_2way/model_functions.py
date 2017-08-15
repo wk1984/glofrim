@@ -39,7 +39,7 @@ def set_values_in_array(vals, idx, update_vals):
 
 # =============================================================================
 
-def write2log(model_dir, model_file, latlon, use_2way, useFluxes, use_RFS, use_floodplain_infiltration_factor, verbose, moment):
+def write2log(model_dir, model_file, latlon, use_2way, useFluxes, use_RFS, use_floodplain_infiltration_factor, adjust_initial_groundwater, verbose, moment):
     """
     Writing model settings/paths/etc to a txt-file in directory.
     Note that PCR-GLOBWB is additionally writing its own log-file and Delft3D DFM adds model
@@ -62,6 +62,7 @@ def write2log(model_dir, model_file, latlon, use_2way, useFluxes, use_RFS, use_f
         print 'fluxes on: ', bool(useFluxes)
         print 'RFS on: ', bool(use_RFS)
         print 'use floodplain infiltration factor: ', bool(use_floodplain_infiltration_factor)
+        print 'adjust initial groundwater: ', bool(adjust_initial_groundwater)
         print 'verbose mode on: ', bool(verbose) 
         if verbose == True:
             print '\nVerbose Output and Log-File saved in: ', folder_name + os.linesep
@@ -711,3 +712,30 @@ def checkLocationCoupledPCRcells(model_pcr, CoupledPCRcellIndices):
         check_map[CoupledPCRcellIndices[i]] = 1.    
 
     return check_map
+    
+# ============================================================================= 
+    
+def adjust_iniGR(model_pcr, GW_recharge_pcr, CoupledPCRcellIndices_2way, adjust_initial_groundwater):
+
+	if adjust_initial_groundwater == True:
+		# load groundwater recharge data from text file
+		GW_average_recharge = np.loadtxt(GW_recharge_pcr)
+		# get recession coefficient using BMI
+		GW_coefficient      = model_pcr.get_var('recessionCoeff')
+		# calculate initial groundwater stores
+		GW_initial_stores   = GW_average_recharge / GW_coefficient
+		# get current groundwater storage using BMI
+		GW_current_storage  = model_pcr.get_var('storGroundwater')
+		# create an array that will be used to set the new groundwater storage
+		GW_new_storage      = np.copy(GW_current_storage)
+		# adjust this array, using the maximum value of the current and new initial stores
+		for i in range(len(CoupledPCRcellIndices_2way)):
+			if GW_current_storage[CoupledPCRcellIndices_2way[i]] != -999:
+				if GW_initial_stores[CoupledPCRcellIndices_2way[i]] > GW_current_storage[CoupledPCRcellIndices_2way[i]]:
+					GW_new_storage[CoupledPCRcellIndices_2way[i]] = GW_initial_stores[CoupledPCRcellIndices_2way[i]]
+		# set this into the model using BMI
+		model_pcr.set_var('storGroundwater', GW_new_storage)
+	else:
+		print '\n>>> initial groundwater properties not adjusted<<<\n'
+	
+	return

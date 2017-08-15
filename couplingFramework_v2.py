@@ -111,6 +111,7 @@ use_Fluxes = strtobool(config.general_settings['use_Fluxes'])
 use_RFS = strtobool(config.general_settings['use_RFS'])
 verbose = strtobool(config.general_settings['verbose'])
 use_floodplain_infiltration_factor = strtobool(config.general_settings['use_floodplain_infiltration_factor'])
+adjust_initial_groundwater = strtobool(config.general_settings['adjust_initial_groundwater'])
 
 # -------------------------------------------------------------------------------------------------
 # SPECIFY NUMERICAL SETTINGS
@@ -152,6 +153,8 @@ config_pcr       	=  config.PCR_settings['config_pcr']
 landmask_pcr     	=  config.PCR_settings['landmask_pcr']
 clone_pcr        	=  config.PCR_settings['clone_pcr']
 
+adjust_initial_groundwater_file = config.general_settings['adjust_initial_groundwater_file']
+
 # -------------------------------------------------------------------------------------------------
 # SET PATHS TO .SO / .DLL FILES
 # -------------------------------------------------------------------------------------------------
@@ -171,7 +174,7 @@ else:
 # -------------------------------------------------------------------------------------------------
                                   
 # initiate logging and define folder for verbose-output
-verbose_folder = model_functions.write2log(model_dir, model_file, latlon, use_2way, use_Fluxes, use_RFS, use_floodplain_infiltration_factor, verbose, moment='start')
+verbose_folder = model_functions.write2log(model_dir, model_file, latlon, use_2way, use_Fluxes, use_RFS, use_floodplain_infiltration_factor, adjust_initial_groundwater, verbose, moment='start')
 print 'Model Start-Time: ', datetime.datetime.now()
 print ''
 
@@ -287,6 +290,8 @@ model_functions.noLDD(model_pcr, CoupledPCRcellIndices, verbose_folder, verbose)
 # -------------------------------------------------------------------------------------------------
 # ACTIVATING A RANGE OF VARIABLES SPECIFICALLY REQUIRED FOR 2WAY-COUPLING
 # -------------------------------------------------------------------------------------------------
+
+model_functions.adjust_iniGR(model_pcr, adjust_initial_groundwater_file, CoupledPCRcellIndices_2way, adjust_initial_groundwater)
 
 new_preventRunoffToDischarge, new_controlDynamicFracWat, new_waterBodyIdsAdjust = model_functions.activate2wayVariables(model_pcr, CoupledPCRcellIndices)
          
@@ -412,7 +417,7 @@ while model_pcr.get_time_step() < nr_pcr_timesteps:
 # ----------------------------------------------------------------------------------------------------
     
 # update and finalize logging
-model_functions.write2log(model_dir, model_file, latlon, use_2way, use_Fluxes, use_RFS, use_floodplain_infiltration_factor, verbose, moment='end') 
+model_functions.write2log(model_dir, model_file, latlon, use_2way, use_Fluxes, use_RFS, use_floodplain_infiltration_factor, adjust_initial_groundwater, verbose, moment='end') 
 # close files
 if verbose == True:
     fo_PCR_V_tot.close()

@@ -33,6 +33,9 @@ use_RFS 	= True
 verbose 	= False
 # use floodplain infiltration factor
 use_floodplain_infiltration_factor = False
+# adjust initial groundwater
+adjust_initial_groundwater = False
+adjust_initial_groundwater_file = path/to/file.txt
 
 [numerical_settings]
 # specify model timesteps
