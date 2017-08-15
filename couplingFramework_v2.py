@@ -226,10 +226,10 @@ elif model_type == 'LFP':
 PCRcoords = coupling_functions.getPCRcoords(landmask_data_pcr)
 print '\n>>> PCR data retrieved <<<\n'
 
-print 'number of 1way model coords: ',len(modelCoords)
-print 'number of 2way model coords: ',len(modelCoords_2way)
-print 'number of 1way cell area entries: ',len(cellAreaSpherical_1way)
-print 'number of 2way cell area entries: ', len(cellAreaSpherical_2way)
+#print 'number of 1way model coords: ',len(modelCoords)
+#print 'number of 2way model coords: ',len(modelCoords_2way)
+#print 'number of 1way cell area entries: ',len(cellAreaSpherical_1way)
+#print 'number of 2way cell area entries: ', len(cellAreaSpherical_2way)
 		
 # -------------------------------------------------------------------------------------------------
 # COUPLING THE GRIDS
@@ -242,9 +242,12 @@ CoupledCellsInfoAll_2way = coupling_functions.coupleAllCells(modelCoords_2way,PC
 # converting single indices of coupled PCR cells to double (array,column) indices
 if use_2way == False:
     CoupleModel2PCR, CouplePCR2model, CoupledPCRcellIndices = coupling_functions.assignPCR2cells(landmask_pcr, modelCoords, verbose)
+    print 'len CoupleModel2PCR + CouplePCR2model: ', len(CoupleModel2PCR), len(CouplePCR2model)
 elif use_2way == True:
     CoupleModel2PCR, CouplePCR2model, CoupledPCRcellIndices = coupling_functions.assignPCR2cells(landmask_pcr, modelCoords, verbose)
     CoupleModel2PCR_2way, CouplePCR2model_2way, CoupledPCRcellIndices_2way = coupling_functions.assignPCR2cells(landmask_pcr, modelCoords_2way, verbose)
+    print 'len CoupleModel2PCR + CouplePCR2model 1way + CoupledPCRcellIndices: ', len(CoupleModel2PCR), len(CouplePCR2model), len(CoupledPCRcellIndices)
+    print 'len CoupleModel2PCR + CouplePCR2model 2way + CoupledPCRcellIndices: ', len(CoupleModel2PCR_2way), len(CouplePCR2model_2way), len(CoupledPCRcellIndices_2way) 
 
 # saving plots of coupled cells to verbose-folder
 # currently doesn't work with FM and use_RFS on, due to data structure required (? check this ?)
@@ -288,8 +291,11 @@ model_functions.noLDD(model_pcr, CoupledPCRcellIndices, verbose_folder, verbose)
 new_preventRunoffToDischarge, new_controlDynamicFracWat, new_waterBodyIdsAdjust = model_functions.activate2wayVariables(model_pcr, CoupledPCRcellIndices)
          
 inundated_area_FM_2_PCR_coupled, inundated_fraction_FM_2_PCR =  model_functions.determine_InundationArea_Hydrodynamics(model_type, model_hydr, CouplePCR2model_2way, CoupledPCRcellIndices_2way, threshold_inundated_depth, cellAreaSpherical_2way, cellarea_data_pcr, landmask_pcr, missing_value_landmask)
+print 'len inundated area FM 2 PCR coupled: ', len(inundated_area_FM_2_PCR_coupled)
+print 'len inundated fraction FM 2 PCR: ', len(inundated_fraction_FM_2_PCR)
          
 water_depths_FM_2_PCR = model_functions.determine_InundationDepth_Hydrodynamics(model_type, model_hydr, landmask_pcr, missing_value_landmask, inundated_area_FM_2_PCR_coupled, CouplePCR2model_2way, CoupledPCRcellIndices_2way, cellAreaSpherical_1way)
+print 'len water depths FM 2 PCR: ', len(water_depths_FM_2_PCR)
 
 # -------------------------------------------------------------------------------------------------
 # UPDATING A RANGE OF VARIABLES SPECIFICALLY REQUIRED FOR 2WAY-COUPLING
@@ -307,9 +313,13 @@ TO DO: get all required variables and how their are determined from Arjen's orig
  
 # retrieving PCR-GLOBWB and converting it to m3/d
 delta_volume_PCR_coupled = model_functions.calculateDeltaVolumes(model_pcr, missing_value_pcr, secPerDay, CoupledPCRcellIndices, cellarea_data_pcr)
+print 'len delta volume PCR coupled: ', len(delta_volume_PCR_coupled)
 
 # dividing delta volume from PCR-GLOBWB over hydraulic cells, depending on model specifications
-delta_water_fm, verbose_volume = model_functions.calculateDeltaWater(CouplePCR2model, CoupleModel2PCR, delta_volume_PCR_coupled, cellAreaSpherical, fraction_timestep, model_type, use_Fluxes)
+delta_water_fm, verbose_volume = model_functions.calculateDeltaWater(CouplePCR2model, CoupleModel2PCR, delta_volume_PCR_coupled, cellAreaSpherical_1way, fraction_timestep, model_type, use_Fluxes)
+print 'len delta water fm: ', len(delta_water_fm)
+
+pdb.set_trace()
 
 # saving PCR-GLOBWB output volumes and volumes used as input to hydraulic models to verbose-folder
 if verbose == True:
@@ -367,7 +377,7 @@ while model_pcr.get_time_step() < nr_pcr_timesteps:
     delta_volume_PCR_coupled = model_functions.calculateDeltaVolumes(model_pcr, missing_value_pcr, secPerDay, CoupledPCRcellIndices, cellarea_data_pcr)                                                                                                  
         
     # dividing delta volume from PCR-GLOBWB over hydraulic cells, depending on model specifications
-    delta_water_fm, verbose_volume = model_functions.calculateDeltaWater(CouplePCR2model, CoupleModel2PCR, delta_volume_PCR_coupled, cellAreaSpherical, fraction_timestep, model_type, use_Fluxes)
+    delta_water_fm, verbose_volume = model_functions.calculateDeltaWater(CouplePCR2model, CoupleModel2PCR, delta_volume_PCR_coupled, cellAreaSpherical_1way, fraction_timestep, model_type, use_Fluxes)
 
     # saving PCR-GLOBWB output volumes and volumes used as input to hydraulic models to verbose-folder
     if verbose == True:
