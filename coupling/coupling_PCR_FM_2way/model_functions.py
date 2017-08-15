@@ -45,8 +45,6 @@ def write2log(model_dir, model_file, latlon, use_2way, useFluxes, use_RFS, use_f
     Note that PCR-GLOBWB is additionally writing its own log-file and Delft3D DFM adds model
     diagnosis and settings to the dia-file.
     Also verbose-output (if verbose == True) is stored in the created directory.
-    
-    TO DO: avoid printing of model settings at end of run if not total number of timesteps is specified in set-file
     """
     
     #- creating folder to store verbose and log output
@@ -64,10 +62,13 @@ def write2log(model_dir, model_file, latlon, use_2way, useFluxes, use_RFS, use_f
         print 'fluxes on: ', bool(useFluxes)
         print 'RFS on: ', bool(use_RFS)
         print 'use floodplain infiltration factor: ', bool(use_floodplain_infiltration_factor)
-        print 'verbose mode on: ', bool(verbose)
-        print '\nVerbose Output and Log-File saved in: ', folder_name + os.linesep
+        print 'verbose mode on: ', bool(verbose) 
+        if verbose == True:
+            print '\nVerbose Output and Log-File saved in: ', folder_name + os.linesep
+        else:
+            print ''
 		
-    elif moment == 'end':
+    elif (moment == 'end') and (verbose == True):
         #- check if folder has already been created
         if os.path.exists(folder_name):
             pass
@@ -124,7 +125,8 @@ def extractModelData_FM(model, model_pcr, landmask_pcr, clone_pcr, useRFS, use_2
     bottom_lvl               = model.get_var('bl') 				# surface elevation of each cell point
     bottom_lvl 				 = bottom_lvl[separator:]
     cellAreaSpherical        = model.get_var('ba') 				# cell area
-    cellAreaSpherical 		 = cellAreaSpherical[separator:]
+    cellAreaSpherical_1way	 = cellAreaSpherical[separator:]
+    cellAreaSpherical_2way	 = cellAreaSpherical[:separator]
     xz_coords	             = model.get_var('xz')				# x-coords of each cell centre point
     xz_coords 				 = xz_coords[separator:]
     yz_coords          		 = model.get_var('yz')				# y-coords of each cell centre point
@@ -154,7 +156,7 @@ def extractModelData_FM(model, model_pcr, landmask_pcr, clone_pcr, useRFS, use_2
     landmask_data_pcr    = pcr.readmap(landmask_pcr)
     clone_data_pcr       = pcr.readmap(clone_pcr)
     
-    return x_coords, y_coords, z_coords, bottom_lvl, cell_points_fm, separator, cellAreaSpherical, xz_coords, yz_coords, modelCoords, modelCoords_2way, \
+    return x_coords, y_coords, z_coords, bottom_lvl, cell_points_fm, separator, cellAreaSpherical_1way, cellAreaSpherical_2way, xz_coords, yz_coords, modelCoords, modelCoords_2way, \
                 cellarea_data_pcr, landmask_data_pcr, clone_data_pcr
                 
 # =============================================================================
@@ -165,8 +167,6 @@ def extractModelData_FP(model, model_dir, model_pcr, landmask_pcr, clone_pcr, ve
     on model specification from initialized LISFLOOD-FP model to be used later in the model run.
     List of variables can be extended, but needs to be specified in 'lib_bmi.cpp' first with
     correct data type declaration.
-    
-    TO DO: get value specified as missing value in DEM automatically!
     """
 	
     BLx                      = model.get_var('blx') 			# x-coord of bottom left corner of grid
@@ -326,7 +326,6 @@ def determine_InundationArea_Hydrodynamics(model_type, model_hydr, CouplePCR2mod
 			# check if water depth of current FM cell is above chosen threshold
 			if current_water_depth_fm[current_FM_cell_index] > threshold_inundated_depth:
 				# if so, add cell area to temporary variable
-				pdb.set_trace()
 				temp_inundated_area_FM += FMcellAreaSpherical[current_FM_cell_index]
 		# at end of loop, assign temporary variable to array storing inundated areas
 		inundated_area_FM_2_PCR_coupled[i] = temp_inundated_area_FM
@@ -339,14 +338,14 @@ def determine_InundationArea_Hydrodynamics(model_type, model_hydr, CouplePCR2mod
 
 # =============================================================================
 
-def determine_InundationDepth_Hydrodynamics(model_type, model, grid_dA, landmask_pcr, missing_value_landmask, inundated_area_FM_2_PCR_coupled, CouplePCR2model_2way, CoupledPCRcellIndices_2way):
+def determine_InundationDepth_Hydrodynamics(model_type, model, landmask_pcr, missing_value_landmask, inundated_area_FM_2_PCR_coupled, CouplePCR2model_2way, CoupledPCRcellIndices_2way, cellAreaSpherical_1way):
     
     # get water volume of all FM cells
 	if model_type == 'DFM':
-		current_volume_fm = model.get_var('vol1')
+		current_volume_fm = np.copy(model.get_var('vol1'))
 	elif model_type == 'LFP':
-		current_volume_fm = model.get_var('H') * grid_dA
-		current_volume_fm = current_volume_fm.ravel()
+		current_volume_fm = np.copy(model.get_var('H'))
+		current_volume_fm = current_volume_fm.ravel() * cellAreaSpherical_1way
     
     # create zero array for filling in total volumes and water depths for each coupled PCR cell
 	water_volume_FM_2_PCR_coupled = np.zeros(len(CouplePCR2model_2way))

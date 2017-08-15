@@ -61,7 +61,8 @@ Progress status 2way-coupling:
 				if RFS is not on, it's only one array for the 2d-cells;
 				running GLOFRIM works
 				
-TO DO: make script such that not only the set/ini-file for coupling, but also the mdu/par-file for hydrodynamics and ini-file for hydrology can be put in command line -> easier batch-runs
+TO DO: 	- make script such that not only the set/ini-file for coupling, but also the mdu/par-file for hydrodynamics and ini-file for hydrology can be put in command line -> easier batch-runs
+		- to speed up 2way coupling, maybe it's worth investigating whether filtering out all hydrodynamic cells which do not contain any water to reduce number of cells to be coupled?
 """
 
 # -------------------------------------------------------------------------------------------------
@@ -79,13 +80,15 @@ import platform
 import numpy as np
 import pyproj as pyproj
 import datetime
+import pdb
+import time
 import bmi.wrapper
 import pcrglobwb_203_30min_2way as pcrglobwb_bmi_v203
 from pcrglobwb_203_30min_2way import pcrglobwb_bmi
+from pcrglobwb_203_30min_2way import disclaimer
 from coupling_PCR_FM_2way import coupling_functions
 from coupling_PCR_FM_2way import model_functions
 from coupling_PCR_FM_2way import configuration
-import pdb
 
 # -------------------------------------------------------------------------------------------------
 # IMPORT MODEL SETTINGS FROM INI-FILE/SET-FILE
@@ -172,6 +175,11 @@ verbose_folder = model_functions.write2log(model_dir, model_file, latlon, use_2w
 print 'Model Start-Time: ', datetime.datetime.now()
 print ''
 
+# print PCR-GLOBWB disclaimer
+print '\n>>> Please consider reading the PCR-GLOBWB disclaimer <<<'
+disclaimer.print_disclaimer()
+time.sleep(5)
+
 # initiate PCR-GLOBWB
 model_pcr = pcrglobwb_bmi_v203.pcrglobwb_bmi.pcrglobwbBMI()
 model_pcr.initialize(config_pcr)
@@ -187,7 +195,7 @@ model_pcr.spinup()
 # initiate hydraulic model
 model_hydr = bmi.wrapper.BMIWrapper(engine = model_path, configfile = (os.path.join(model_dir, model_file)))
 model_hydr.initialize()
-print '\n>>> ', model_type, ' Initialized <<<\n' 
+print '\n>>> ',model_type,' Initialized <<<\n' 
 
 # -------------------------------------------------------------------------------------------------
 # EXCTRACTING RELEVANT DATA FROM MODELS
@@ -196,7 +204,7 @@ print '\n>>> ', model_type, ' Initialized <<<\n'
 if model_type == 'DFM':
 
     #- retrieving data from Delft3D FM    
-    x_coords, y_coords, z_coords, bottom_lvl, cell_points_fm, separator_1D, cellAreaSpherical, xz_coords, yz_coords, modelCoords, modelCoords_2way,\
+    x_coords, y_coords, z_coords, bottom_lvl, cell_points_fm, separator_1D, cellAreaSpherical_1way, cellAreaSpherical_2way, xz_coords, yz_coords, modelCoords, modelCoords_2way,\
                 cellarea_data_pcr, landmask_data_pcr, clone_data_pcr = model_functions.extractModelData_FM(model_hydr, model_pcr, landmask_pcr, clone_pcr, use_RFS, use_2way)
     print '\n>>> DFM data retrieved <<<\n'
          
@@ -204,8 +212,10 @@ elif model_type == 'LFP':
     
     #- retrieving data from LISFLOOD-FP
     dx, dy, DEM, bottom_lvl, H, waterDepth, rows, cols, \
-                list_x_coords, list_x_coords_2way, list_y_coords, list_y_coords_2way, coupledFPindices, coupledFPindices_2way, grid_dA, cellAreaSpherical, SGCQin, separator_1D,\
+                list_x_coords, list_x_coords_2way, list_y_coords, list_y_coords_2way, coupledFPindices, coupledFPindices_2way, grid_dA, cellAreaSpherical_1way, SGCQin, separator_1D,\
                 cellarea_data_pcr, landmask_data_pcr, clone_data_pcr = model_functions.extractModelData_FP(model_hydr, model_dir, model_pcr, landmask_pcr, clone_pcr, verbose_folder, use_RFS, use_2way, verbose)
+                
+    cellAreaSpherical_2way = np.copy(cellAreaSpherical_1way)
                 
     #- computing FP-coordinates    
     modelCoords = coupling_functions.getVerticesFromMidPoints(list_x_coords, list_y_coords, dx, dy, verbose)
@@ -215,6 +225,11 @@ elif model_type == 'LFP':
 #- computing PCR-coordinates
 PCRcoords = coupling_functions.getPCRcoords(landmask_data_pcr)
 print '\n>>> PCR data retrieved <<<\n'
+
+print 'number of 1way model coords: ',len(modelCoords)
+print 'number of 2way model coords: ',len(modelCoords_2way)
+print 'number of 1way cell area entries: ',len(cellAreaSpherical_1way)
+print 'number of 2way cell area entries: ', len(cellAreaSpherical_2way)
 		
 # -------------------------------------------------------------------------------------------------
 # COUPLING THE GRIDS
@@ -272,9 +287,9 @@ model_functions.noLDD(model_pcr, CoupledPCRcellIndices, verbose_folder, verbose)
 
 new_preventRunoffToDischarge, new_controlDynamicFracWat, new_waterBodyIdsAdjust = model_functions.activate2wayVariables(model_pcr, CoupledPCRcellIndices)
          
-inundated_area_FM_2_PCR_coupled, inundated_fraction_FM_2_PCR =  model_functions.determine_InundationArea_Hydrodynamics(model_type, model_hydr, CouplePCR2model_2way, CoupledPCRcellIndices_2way, threshold_inundated_depth, cellAreaSpherical, cellarea_data_pcr, landmask_pcr, missing_value_landmask)
+inundated_area_FM_2_PCR_coupled, inundated_fraction_FM_2_PCR =  model_functions.determine_InundationArea_Hydrodynamics(model_type, model_hydr, CouplePCR2model_2way, CoupledPCRcellIndices_2way, threshold_inundated_depth, cellAreaSpherical_2way, cellarea_data_pcr, landmask_pcr, missing_value_landmask)
          
-water_depths_FM_2_PCR = model_functions.determine_InundationDepth_Hydrodynamics(model_type, model_hydr, grid_dA, landmask_pcr, missing_value_landmask, inundated_area_FM_2_PCR_coupled, CouplePCR2model_2way, CoupledPCRcellIndices_2way)
+water_depths_FM_2_PCR = model_functions.determine_InundationDepth_Hydrodynamics(model_type, model_hydr, landmask_pcr, missing_value_landmask, inundated_area_FM_2_PCR_coupled, CouplePCR2model_2way, CoupledPCRcellIndices_2way, cellAreaSpherical_1way)
 
 # -------------------------------------------------------------------------------------------------
 # UPDATING A RANGE OF VARIABLES SPECIFICALLY REQUIRED FOR 2WAY-COUPLING
