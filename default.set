@@ -35,6 +35,7 @@ verbose 	= False
 use_floodplain_infiltration_factor = False
 # adjust initial groundwater
 adjust_initial_groundwater = False
+# if above is set to True, provide file with scaling properties; if not, specify anything
 adjust_initial_groundwater_file = path/to/file.txt
 
 [numerical_settings]

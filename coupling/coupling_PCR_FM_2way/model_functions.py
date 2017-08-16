@@ -351,22 +351,29 @@ def determine_InundationDepth_Hydrodynamics(model_type, model, landmask_pcr, mis
     # create zero array for filling in total volumes and water depths for each coupled PCR cell
 	water_volume_FM_2_PCR_coupled = np.zeros(len(CouplePCR2model_2way))
 	water_depths_FM_2_PCR_coupled = np.zeros(len(CouplePCR2model_2way))
+	
     # create zero array of appropriate size for using BMI function 'set_var'
 	water_depths_FM_2_PCR = coupling_functions.zeroMapArray(landmask_pcr, missingValuesMap=missing_value_landmask)
+	water_volume_FM_2_PCR = coupling_functions.zeroMapArray(landmask_pcr, missingValuesMap=missing_value_landmask)
     
     # loop over all coupled PCR cells and fill in and/or calculate values
 	for i in range(len(CouplePCR2model_2way)):
+		
 		# get total volume of all FM cells coupled to current PCR cell
 		water_volume_FM_2_PCR_coupled[i] = np.sum(current_volume_fm[CouplePCR2model_2way[i][1]])
+		# assign value of current cell to zero array to be used with BMI
+		water_volume_FM_2_PCR[CoupledPCRcellIndices_2way[i]] = water_volume_FM_2_PCR_coupled[i]
+		
         # divide total volume by inundated FM area to obtain water depth
 		if inundated_area_FM_2_PCR_coupled[i] > 0. :
 			water_depths_FM_2_PCR_coupled[i] = water_volume_FM_2_PCR_coupled[i] / inundated_area_FM_2_PCR_coupled[i]
 		else:
 			water_depths_FM_2_PCR_coupled[i] = 0.
+			
         # assign value of current cell to zero array to be used with BMI
 		water_depths_FM_2_PCR[CoupledPCRcellIndices_2way[i]] = water_depths_FM_2_PCR_coupled[i]
 
-	return water_depths_FM_2_PCR 
+	return water_depths_FM_2_PCR, water_volume_FM_2_PCR 
       
 # =============================================================================
     
@@ -402,18 +409,20 @@ def noStorage(model_pcr, missing_value_pcr, CoupledPCRcellIndices, CouplePCR2mod
 # =============================================================================
     
 def updateHydrologicVariables(model_pcr, new_preventRunoffToDischarge, new_controlDynamicFracWat, new_waterBodyIdsAdjust, water_depths_floodplains_FM_2_PCR, \
-            inundated_fraction_floodplains_FM_2_PCR, new_channelStorage_pcr, inundated_fraction_rivers_FM_2_PCR, new_controlFloodplainFactor, use_floodplain_infiltration_factor):
+            inundated_fraction_floodplains_FM_2_PCR, new_channelStorage_pcr, new_controlFloodplainFactor, use_floodplain_infiltration_factor):
     """
     This functions update variables in the hydrologic models based on hydrodynamics
     """
     # adjusting maps controlling the locations where certain PCR variables should be updated
     # NOTE: THIS ONLY HAS TO BE DONE ONCE!
-    if model_pcr.get_current_timestep() == 1.:
+    if model_pcr.get_time_step() == 1.:
         model_pcr.set_var(('routing','preventRunoffToDischarge'), new_preventRunoffToDischarge)
         model_pcr.set_var(('routing','controlDynamicFracWat'), new_controlDynamicFracWat)
         model_pcr.set_var(('WaterBodies', 'waterBodyIdsAdjust'), new_waterBodyIdsAdjust)
+        
+        print '\n>>> updated hydrologic variables step 1 <<<\n'
 
-    elif model_pcr.get_current_timestep() > 1.:
+    elif model_pcr.get_time_step() > 1.:
         # add water from FM floodplains back to PCR
         model_pcr.set_var(('grassland','floodplainWaterLayer'), water_depths_floodplains_FM_2_PCR)
         model_pcr.set_var(('forest','floodplainWaterLayer'), water_depths_floodplains_FM_2_PCR)
@@ -424,9 +433,10 @@ def updateHydrologicVariables(model_pcr, new_preventRunoffToDischarge, new_contr
     
         # add water from FM rivers back to PCR
         model_pcr.set_var(('routing','channelStorage'), new_channelStorage_pcr)
-    
-        # set the variable for dealing with river (water bodies) area fraction in PCR
-        model_pcr.set_var(('routing','waterBodyFractionFM'), inundated_fraction_rivers_FM_2_PCR)
+        
+#    	 # assuming this in not required anymore if RFS is implemented differently than in Arjen's version
+#        # set the variable for dealing with river (water bodies) area fraction in PCR
+#        model_pcr.set_var(('routing','waterBodyFractionFM'), inundated_fraction_rivers_FM_2_PCR)
     
         # floodplain scaling should only be changed using BMI if specified at model initialization
         if use_floodplain_infiltration_factor == True:
@@ -739,3 +749,41 @@ def adjust_iniGR(model_pcr, GW_recharge_pcr, CoupledPCRcellIndices_2way, adjust_
 		print '\n>>> initial groundwater properties not adjusted<<<\n'
 	
 	return
+	
+# =============================================================================
+
+def activate_floodplain_infiltration_factor(model_pcr, CoupledPCRcellIndices, use_floodplain_infiltration_factor):
+	
+	# obtain default scaling factor
+	new_controlFloodplainFactor = np.copy(model_pcr.get_var(('forest','controlFloodplainFactor')))
+	
+	# check if floodplain scaling factor is to be activated
+	if use_floodplain_infiltration_factor == True:
+		
+		# assign zero value to coupled PCR cells with FM river cells
+		for i in range(len(CoupledPCRcellIndices)):
+			if boolean_river_cell_in_coupled_PCR_cell[i]:
+				new_controlFloodplainFactor[CoupledPCRcellIndices[i]] = 0.
+				
+		print '\n>>> using floodplain scaling factor <<<\n'
+		
+	else:
+		
+		print '\n>>> not using floodplain scaling factor <<<\n'
+		
+	return new_controlFloodplainFactor
+
+# =============================================================================
+
+def determine_new_channelStoragePCR(model_pcr, landmask_pcr, missing_value_landmask, water_volume_FM_2_PCR):
+	
+	current_channelStorage_pcr  = model_pcr.get_var(('routing','channelStorage'))
+
+	new_channelStorage_pcr = coupling_functions.zeroMapArray(landmask_pcr, missingValuesMap=missing_value_landmask)
+
+	for i in range(len(new_channelStorage_pcr)):
+		for j in range(len(new_channelStorage_pcr[0])):
+			if current_channelStorage_pcr[i][j] != -999:
+				new_channelStorage_pcr[i][j] = current_channelStorage_pcr[i][j] + water_volume_FM_2_PCR[i][j]
+            
+	return new_channelStorage_pcr

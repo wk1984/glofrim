@@ -293,23 +293,26 @@ model_functions.noLDD(model_pcr, CoupledPCRcellIndices, verbose_folder, verbose)
 
 model_functions.adjust_iniGR(model_pcr, adjust_initial_groundwater_file, CoupledPCRcellIndices_2way, adjust_initial_groundwater)
 
+new_controlFloodplainFactor = model_functions.activate_floodplain_infiltration_factor(model_pcr, CoupledPCRcellIndices_2way, use_floodplain_infiltration_factor)
+
 new_preventRunoffToDischarge, new_controlDynamicFracWat, new_waterBodyIdsAdjust = model_functions.activate2wayVariables(model_pcr, CoupledPCRcellIndices)
          
 inundated_area_FM_2_PCR_coupled, inundated_fraction_FM_2_PCR =  model_functions.determine_InundationArea_Hydrodynamics(model_type, model_hydr, CouplePCR2model_2way, CoupledPCRcellIndices_2way, threshold_inundated_depth, cellAreaSpherical_2way, cellarea_data_pcr, landmask_pcr, missing_value_landmask)
-print 'len inundated area FM 2 PCR coupled: ', len(inundated_area_FM_2_PCR_coupled)
-print 'len inundated fraction FM 2 PCR: ', len(inundated_fraction_FM_2_PCR)
          
-water_depths_FM_2_PCR = model_functions.determine_InundationDepth_Hydrodynamics(model_type, model_hydr, landmask_pcr, missing_value_landmask, inundated_area_FM_2_PCR_coupled, CouplePCR2model_2way, CoupledPCRcellIndices_2way, cellAreaSpherical_1way)
-print 'len water depths FM 2 PCR: ', len(water_depths_FM_2_PCR)
+water_depths_FM_2_PCR, water_volume_FM_2_PCR = model_functions.determine_InundationDepth_Hydrodynamics(model_type, model_hydr, landmask_pcr, missing_value_landmask, inundated_area_FM_2_PCR_coupled, CouplePCR2model_2way, CoupledPCRcellIndices_2way, cellAreaSpherical_1way)
+
+new_storage_pcr = model_functions.determine_new_channelStoragePCR(model_pcr, landmask_pcr, missing_value_landmask, water_volume_FM_2_PCR)
+
+#print 'len inundated area FM 2 PCR coupled: ', len(inundated_area_FM_2_PCR_coupled)
+#print 'len inundated fraction FM 2 PCR: ', len(inundated_fraction_FM_2_PCR)
+#print 'len water depths FM 2 PCR: ', len(water_depths_FM_2_PCR)
 
 # -------------------------------------------------------------------------------------------------
 # UPDATING A RANGE OF VARIABLES SPECIFICALLY REQUIRED FOR 2WAY-COUPLING
 # ------------------------------------------------------------------------------------------------- 
-"""
-TO DO: get all required variables and how their are determined from Arjen's original code
-"""
-#model_functions.updateHydrologicVariables(model_pcr, new_preventRunoffToDischarge, new_controlDynamicFracWat, new_waterBodyIdsAdjust, water_depths_FM_2_PCR, \
-#            inundated_fraction_FM_2_PCR, new_channelStorage_pcr, inundated_fraction_rivers_FM_2_PCR, new_controlFloodplainFactor, use_floodplain_infiltration_factor)
+
+model_functions.updateHydrologicVariables(model_pcr, new_preventRunoffToDischarge, new_controlDynamicFracWat, new_waterBodyIdsAdjust, water_depths_FM_2_PCR, \
+            inundated_fraction_FM_2_PCR, new_storage_pcr, new_controlFloodplainFactor, use_floodplain_infiltration_factor)
 
 # -------------------------------------------------------------------------------------------------
 # CALCULATE DELTA VOLUMES (DAY 1)
