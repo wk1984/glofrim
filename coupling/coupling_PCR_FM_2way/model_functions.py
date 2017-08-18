@@ -480,7 +480,7 @@ def noLDD(model_pcr, CoupledPCRcellIndices, verbose_folder, verbose):
 
 # =============================================================================
 
-def calculateDeltaVolumes(model_pcr, missing_value_pcr, secPerDay, CoupledPCRcellIndices, cellarea_data_pcr):
+def calculateDeltaVolumes(model_pcr, missing_value_pcr, secPerDay, CoupledPCRcellIndices, cellarea_data_pcr, water_volume_FM_2_PCR):
     """
     Calculating the delta volumes [m3/d] for all coupled PCR-cells.
     Delta volumes are based on discharge, surfaceRunoff, and topWaterLayer (only 2way-coupling) in PCR-GLOBWB.
@@ -509,34 +509,57 @@ def calculateDeltaVolumes(model_pcr, missing_value_pcr, secPerDay, CoupledPCRcel
     # current_discharge_pcr = np.random.rand(len_y, len_x)
     # current_runoff_pcr = np.random.rand(len_y, len_x)
     # current_waterlayer_pcr  = np.random.rand(len_y, len_x)
-
-    # 1a. Discharge
     
-    # prepare empty array for all PCR-cells
-    water_volume_PCR_rivers = np.zeros([len(current_discharge_pcr),len(current_discharge_pcr[0])])
-    
-    # loop over current discharge and convert to m3/d; missing values are replaced with zero
+    # Step 1: convert everything to m3/d and set missing values to zero
     water_volume_PCR_rivers = current_discharge_pcr * secPerDay
     water_volume_PCR_rivers[current_discharge_pcr==missing_value_pcr] = 0.
-
-	# prepare empty array for coupled PCR-cells
-    # get daily discharge volumes for all coupled PCR-cells [m3/day]
-    water_volume_PCR_rivers_coupled = water_volume_PCR_rivers[zip(*CoupledPCRcellIndices)]
-    # 1b. Runoff and Waterlayer
     water_volume_PCR_runoff = current_runoff_pcr * cellarea_data_pcr
     water_volume_PCR_runoff[current_runoff_pcr==missing_value_pcr] = 0.
     water_volume_PCR_waterlayer = current_waterlayer_pcr * cellarea_data_pcr
     water_volume_PCR_waterlayer[current_waterlayer_pcr==missing_value_pcr] = 0.
-    # # loop over current runoff and waterlayer and convert to m3/d; missing values are replaced with zero
+    
+    # Step 2: deterime total input volume from PCR-GLOBWB that should be present at this time step
+    water_volume_PCR_total_in = water_volume_PCR_rivers + water_volume_PCR_runoff + water_volume_PCR_waterlayer
+    
+    # Step 3: remove water volume already present in PCR-GLOBWB from previous time step to obtain delta volume
+    delta_volume_PCR = water_volume_PCR_total_in - water_volume_FM_2_PCR
+    
+    # Step 4: clip to coupled PCR-GLOBWB cells only
+    delta_volume_PCR_coupled = delta_volume_PCR[zip(*CoupledPCRcellIndices)]
+    
+    ### OLD ###
 
-    water_volume_PCR_runoff_coupled = water_volume_PCR_runoff[zip(*CoupledPCRcellIndices)]
-    water_volume_PCR_waterlayer_coupled = water_volume_PCR_waterlayer[zip(*CoupledPCRcellIndices)]
-    water_volume_PCR_floodplains_coupled = water_volume_PCR_runoff_coupled + water_volume_PCR_waterlayer_coupled
-    water_volume_PCR_coupled = water_volume_PCR_floodplains_coupled + water_volume_PCR_rivers_coupled
+    # 1a. Discharge
+    
+    # prepare empty array for all PCR-cells
+    # IS THIS ACTUALLY NEEDED? IF SO, WHY NOT PRESENT FOR OTHER ARRAYS?
+    #water_volume_PCR_rivers = np.zeros([len(current_discharge_pcr),len(current_discharge_pcr[0])])
+    
+    # loop over current discharge and convert to m3/d; missing values are replaced with zero
+    #water_volume_PCR_rivers = current_discharge_pcr * secPerDay
+    #water_volume_PCR_rivers[current_discharge_pcr==missing_value_pcr] = 0.
 
-    delta_volume_PCR_coupled = water_volume_PCR_coupled - 0.
+	# prepare empty array for coupled PCR-cells
+    # get daily discharge volumes for all coupled PCR-cells [m3/day]
+    #water_volume_PCR_rivers_coupled = water_volume_PCR_rivers[zip(*CoupledPCRcellIndices)]
+    
+    # 1b. Runoff and Waterlayer
+    #water_volume_PCR_runoff = current_runoff_pcr * cellarea_data_pcr
+    #water_volume_PCR_runoff[current_runoff_pcr==missing_value_pcr] = 0.
+    #water_volume_PCR_waterlayer = current_waterlayer_pcr * cellarea_data_pcr
+    #water_volume_PCR_waterlayer[current_waterlayer_pcr==missing_value_pcr] = 0.
 
-    return delta_volume_PCR_coupled
+    #water_volume_PCR_runoff_coupled = water_volume_PCR_runoff[zip(*CoupledPCRcellIndices)]
+    #water_volume_PCR_waterlayer_coupled = water_volume_PCR_waterlayer[zip(*CoupledPCRcellIndices)]
+    #water_volume_PCR_floodplains_coupled = water_volume_PCR_runoff_coupled + water_volume_PCR_waterlayer_coupled
+    
+    #water_volume_PCR_coupled = water_volume_PCR_floodplains_coupled + water_volume_PCR_rivers_coupled
+
+    #delta_volume_PCR_coupled = water_volume_PCR_coupled - 0.
+    
+    ### OLD ###
+
+    return delta_volume_PCR, delta_volume_PCR_coupled
     
 # =============================================================================
 

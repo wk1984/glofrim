@@ -229,10 +229,10 @@ elif model_type == 'LFP':
 PCRcoords = coupling_functions.getPCRcoords(landmask_data_pcr)
 print '\n>>> PCR data retrieved <<<\n'
 
-#print 'number of 1way model coords: ',len(modelCoords)
-#print 'number of 2way model coords: ',len(modelCoords_2way)
-#print 'number of 1way cell area entries: ',len(cellAreaSpherical_1way)
-#print 'number of 2way cell area entries: ', len(cellAreaSpherical_2way)
+print 'number of 1way model coords: ',len(modelCoords)
+print 'number of 2way model coords: ',len(modelCoords_2way)
+print 'number of 1way cell area entries: ',len(cellAreaSpherical_1way)
+print 'number of 2way cell area entries: ', len(cellAreaSpherical_2way)
 		
 # -------------------------------------------------------------------------------------------------
 # COUPLING THE GRIDS
@@ -320,14 +320,16 @@ model_functions.updateHydrologicVariables(model_pcr, new_preventRunoffToDischarg
 # ------------------------------------------------------------------------------------------------- 
  
 # retrieving PCR-GLOBWB and converting it to m3/d
-delta_volume_PCR_coupled = model_functions.calculateDeltaVolumes(model_pcr, missing_value_pcr, secPerDay, CoupledPCRcellIndices, cellarea_data_pcr)
+# PROBLEM: the 1way and 2way arrays have different lengths and hence cannot be subtracted...
+delta_volume_PCR, delta_volume_PCR_coupled = model_functions.calculateDeltaVolumes(model_pcr, missing_value_pcr, secPerDay, CoupledPCRcellIndices_2way, cellarea_data_pcr, water_volume_FM_2_PCR)
+print 'len water volume PCR 2 FM: ', len(water_volume_FM_2_PCR)
 print 'len delta volume PCR coupled: ', len(delta_volume_PCR_coupled)
+
+pdb.set_trace()
 
 # dividing delta volume from PCR-GLOBWB over hydraulic cells, depending on model specifications
 delta_water_fm, verbose_volume = model_functions.calculateDeltaWater(CouplePCR2model, CoupleModel2PCR, delta_volume_PCR_coupled, cellAreaSpherical_1way, fraction_timestep, model_type, use_Fluxes)
 print 'len delta water fm: ', len(delta_water_fm)
-
-pdb.set_trace()
 
 # saving PCR-GLOBWB output volumes and volumes used as input to hydraulic models to verbose-folder
 if verbose == True:
