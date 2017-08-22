@@ -286,6 +286,9 @@ def fillLFPgrid(model, indices_list, value_list, array_in, verbose_folder, verbo
 # =============================================================================
 
 def activate2wayVariables(model_pcr, CoupledPCRcellIndices):
+    """
+    if applying before 1st update, volume coupled to FM is way higher than without!
+    """
 	
     # get variable/map from PCR
     new_preventRunoffToDischarge = model_pcr.get_var('preventRunoffToDischarge')
@@ -297,7 +300,11 @@ def activate2wayVariables(model_pcr, CoupledPCRcellIndices):
     new_controlDynamicFracWat = set_values_in_array(new_controlDynamicFracWat, CoupledPCRcellIndices, 0.)
     new_waterBodyIdsAdjust = set_values_in_array(new_waterBodyIdsAdjust, CoupledPCRcellIndices, 0.)
     
-    return new_preventRunoffToDischarge, new_controlDynamicFracWat, new_waterBodyIdsAdjust
+    model_pcr.set_var(('routing','preventRunoffToDischarge'), new_preventRunoffToDischarge)
+    model_pcr.set_var(('routing','controlDynamicFracWat'), new_controlDynamicFracWat)
+    model_pcr.set_var(('WaterBodies', 'waterBodyIdsAdjust'), new_waterBodyIdsAdjust)
+    
+    return
     
 # =============================================================================
 
@@ -408,46 +415,25 @@ def noStorage(model_pcr, missing_value_pcr, CoupledPCRcellIndices, CouplePCR2mod
     
 # =============================================================================
     
-def updateHydrologicVariables(model_pcr, new_preventRunoffToDischarge, new_controlDynamicFracWat, new_waterBodyIdsAdjust, water_depths_floodplains_FM_2_PCR, \
-            inundated_fraction_floodplains_FM_2_PCR, new_channelStorage_pcr, new_controlFloodplainFactor, use_floodplain_infiltration_factor):
+def updateHydrologicVariables(model_pcr, water_depths_floodplains_FM_2_PCR, inundated_fraction_floodplains_FM_2_PCR, new_channelStorage_pcr):
     """
     This functions update variables in the hydrologic models based on hydrodynamics
     """
-    # adjusting maps controlling the locations where certain PCR variables should be updated
-    # NOTE: THIS ONLY HAS TO BE DONE ONCE!
-    if model_pcr.get_time_step() == 1.:
-        model_pcr.set_var(('routing','preventRunoffToDischarge'), new_preventRunoffToDischarge)
-        model_pcr.set_var(('routing','controlDynamicFracWat'), new_controlDynamicFracWat)
-        model_pcr.set_var(('WaterBodies', 'waterBodyIdsAdjust'), new_waterBodyIdsAdjust)
-        
-        print '\n>>> updated hydrologic variables step 1 <<<\n'
 
-    elif model_pcr.get_time_step() > 1.:
-        # add water from FM floodplains back to PCR
-        model_pcr.set_var(('grassland','floodplainWaterLayer'), water_depths_floodplains_FM_2_PCR)
-        model_pcr.set_var(('forest','floodplainWaterLayer'), water_depths_floodplains_FM_2_PCR)
+    # add water from FM floodplains back to PCR
+    model_pcr.set_var(('grassland','floodplainWaterLayer'), water_depths_floodplains_FM_2_PCR)
+    model_pcr.set_var(('forest','floodplainWaterLayer'), water_depths_floodplains_FM_2_PCR)
     
-        # set the variable for dealing with floodplain inundated area fraction in PCR
-        model_pcr.set_var(('grassland','inundatedFraction'), inundated_fraction_floodplains_FM_2_PCR)
-        model_pcr.set_var(('forest','inundatedFraction'), inundated_fraction_floodplains_FM_2_PCR)
+    # set the variable for dealing with floodplain inundated area fraction in PCR
+    model_pcr.set_var(('grassland','inundatedFraction'), inundated_fraction_floodplains_FM_2_PCR)
+    model_pcr.set_var(('forest','inundatedFraction'), inundated_fraction_floodplains_FM_2_PCR)
     
-        # add water from FM rivers back to PCR
-        model_pcr.set_var(('routing','channelStorage'), new_channelStorage_pcr)
+    # add water from FM rivers back to PCR
+    model_pcr.set_var(('routing','channelStorage'), new_channelStorage_pcr)
         
 #    	 # assuming this in not required anymore if RFS is implemented differently than in Arjen's version
 #        # set the variable for dealing with river (water bodies) area fraction in PCR
 #        model_pcr.set_var(('routing','waterBodyFractionFM'), inundated_fraction_rivers_FM_2_PCR)
-    
-        # floodplain scaling should only be changed using BMI if specified at model initialization
-        if use_floodplain_infiltration_factor == True:
-        
-            # activate the scaling factor functions
-            model_pcr.set_var(('forest','ActivateFactorInfiltrationFloodplain'), 'True')
-            model_pcr.set_var(('grassland','ActivateFactorInfiltrationFloodplain'), 'True')
-        
-            # set the variable controlling the floodplain infiltration scaling factor
-            model_pcr.set_var(('forest','controlFloodplainFactor'), new_controlFloodplainFactor)
-            model_pcr.set_var(('grassland','controlFloodplainFactor'), new_controlFloodplainFactor)
     
     return
     
@@ -523,41 +509,16 @@ def calculateDeltaVolumes(model_pcr, missing_value_pcr, secPerDay, CoupledPCRcel
     
     # Step 3: remove water volume already present in PCR-GLOBWB from previous time step to obtain delta volume
     delta_volume_PCR = water_volume_PCR_total_in - water_volume_FM_2_PCR
-    
+       
     # Step 4: clip to coupled PCR-GLOBWB cells only
     delta_volume_PCR_coupled = delta_volume_PCR[zip(*CoupledPCRcellIndices)]
     
-    ### OLD ###
-
-    # 1a. Discharge
-    
-    # prepare empty array for all PCR-cells
-    # IS THIS ACTUALLY NEEDED? IF SO, WHY NOT PRESENT FOR OTHER ARRAYS?
-    #water_volume_PCR_rivers = np.zeros([len(current_discharge_pcr),len(current_discharge_pcr[0])])
-    
-    # loop over current discharge and convert to m3/d; missing values are replaced with zero
-    #water_volume_PCR_rivers = current_discharge_pcr * secPerDay
-    #water_volume_PCR_rivers[current_discharge_pcr==missing_value_pcr] = 0.
-
-	# prepare empty array for coupled PCR-cells
-    # get daily discharge volumes for all coupled PCR-cells [m3/day]
-    #water_volume_PCR_rivers_coupled = water_volume_PCR_rivers[zip(*CoupledPCRcellIndices)]
-    
-    # 1b. Runoff and Waterlayer
-    #water_volume_PCR_runoff = current_runoff_pcr * cellarea_data_pcr
-    #water_volume_PCR_runoff[current_runoff_pcr==missing_value_pcr] = 0.
-    #water_volume_PCR_waterlayer = current_waterlayer_pcr * cellarea_data_pcr
-    #water_volume_PCR_waterlayer[current_waterlayer_pcr==missing_value_pcr] = 0.
-
-    #water_volume_PCR_runoff_coupled = water_volume_PCR_runoff[zip(*CoupledPCRcellIndices)]
-    #water_volume_PCR_waterlayer_coupled = water_volume_PCR_waterlayer[zip(*CoupledPCRcellIndices)]
-    #water_volume_PCR_floodplains_coupled = water_volume_PCR_runoff_coupled + water_volume_PCR_waterlayer_coupled
-    
-    #water_volume_PCR_coupled = water_volume_PCR_floodplains_coupled + water_volume_PCR_rivers_coupled
-
-    #delta_volume_PCR_coupled = water_volume_PCR_coupled - 0.
-    
-    ### OLD ###
+    #if np.round(np.sum(water_volume_PCR_total_in[zip(*CoupledPCRcellIndices)]) - np.sum(water_volume_FM_2_PCR[zip(*CoupledPCRcellIndices)]), decimals=-6) != np.round(np.sum(delta_volume_PCR_coupled), decimals=-6):
+    if ((np.sum(water_volume_PCR_total_in[zip(*CoupledPCRcellIndices)]) - np.sum(water_volume_FM_2_PCR[zip(*CoupledPCRcellIndices)])) / np.sum(delta_volume_PCR_coupled) < 0.95) or \
+			((np.sum(water_volume_PCR_total_in[zip(*CoupledPCRcellIndices)]) - np.sum(water_volume_FM_2_PCR[zip(*CoupledPCRcellIndices)])) / np.sum(delta_volume_PCR_coupled) > 1.05):
+		print 'computed delta vol:  ', np.sum(water_volume_PCR_total_in[zip(*CoupledPCRcellIndices)]) - np.sum(water_volume_FM_2_PCR[zip(*CoupledPCRcellIndices)])
+		print 'resulting delta vol: ', np.sum(delta_volume_PCR_coupled)
+		sys.exit('\nERROR: water balance in calculating delta volume not accurate!\n')
 
     return delta_volume_PCR, delta_volume_PCR_coupled
     
@@ -609,7 +570,7 @@ def calculateDeltaWater(CouplePCR2model, CoupleModel2PCR, delta_volume_PCR_coupl
                 verbose_volume[current_cell_index] = temp_water_volume  / 1.
                     
         else:
-            os.sys.exit('delta volume PCR coupled is negative, should not be the case!')
+            os.sys.exit('\nERROR: delta volume PCR coupled is negative, should not be the case!\n')
                    
     # calculate additional water levels or fluxes based on chosen settings
     if (useFluxes == False) and (model_type == 'DFM'):
@@ -749,6 +710,9 @@ def checkLocationCoupledPCRcells(model_pcr, CoupledPCRcellIndices):
 # ============================================================================= 
     
 def adjust_iniGR(model_pcr, GW_recharge_pcr, CoupledPCRcellIndices_2way, adjust_initial_groundwater):
+	"""
+	has to be done only before first update starts!
+	"""
 
 	if adjust_initial_groundwater == True:
 		# load groundwater recharge data from text file
@@ -776,25 +740,36 @@ def adjust_iniGR(model_pcr, GW_recharge_pcr, CoupledPCRcellIndices_2way, adjust_
 # =============================================================================
 
 def activate_floodplain_infiltration_factor(model_pcr, CoupledPCRcellIndices, use_floodplain_infiltration_factor):
+	"""
+	has to be done only before first update starts!
+	"""
 	
-	# obtain default scaling factor
+    # obtain default scaling factor
 	new_controlFloodplainFactor = np.copy(model_pcr.get_var(('forest','controlFloodplainFactor')))
 	
-	# check if floodplain scaling factor is to be activated
+    # check if floodplain scaling factor is to be activated
 	if use_floodplain_infiltration_factor == True:
 		
-		# assign zero value to coupled PCR cells with FM river cells
+	    # assign zero value to coupled PCR cells with FM river cells
 		for i in range(len(CoupledPCRcellIndices)):
 			if boolean_river_cell_in_coupled_PCR_cell[i]:
 				new_controlFloodplainFactor[CoupledPCRcellIndices[i]] = 0.
 				
 		print '\n>>> using floodplain scaling factor <<<\n'
-		
+        
+		# activate the scaling factor functions
+		model_pcr.set_var(('forest','ActivateFactorInfiltrationFloodplain'), 'True')
+		model_pcr.set_var(('grassland','ActivateFactorInfiltrationFloodplain'), 'True')
+        
+        # set the variable controlling the floodplain infiltration scaling factor
+		model_pcr.set_var(('forest','controlFloodplainFactor'), new_controlFloodplainFactor)
+		model_pcr.set_var(('grassland','controlFloodplainFactor'), new_controlFloodplainFactor)
+	
 	else:
 		
 		print '\n>>> not using floodplain scaling factor <<<\n'
 		
-	return new_controlFloodplainFactor
+	return 
 
 # =============================================================================
 
