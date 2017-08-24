@@ -209,6 +209,7 @@ if model_type == 'DFM':
     #- retrieving data from Delft3D FM    
     x_coords, y_coords, z_coords, bottom_lvl, cell_points_fm, separator_1D, cellAreaSpherical_1way, cellAreaSpherical_2way, xz_coords, yz_coords, modelCoords, modelCoords_2way,\
                 cellarea_data_pcr, landmask_data_pcr, clone_data_pcr = model_functions.extractModelData_FM(model_hydr, model_pcr, landmask_pcr, clone_pcr, use_RFS, use_2way)
+    coupledFPindices = 0.
     print '\n>>> DFM data retrieved <<<\n'
          
 elif model_type == 'LFP':
@@ -295,13 +296,17 @@ model_functions.activate_floodplain_infiltration_factor(model_pcr, CoupledPCRcel
 # first day outside loop, to make sure PCR time is at start time (timestep 1) and not at end of spin-up (timestep 365)
 # ------------------------------------------------------------------------------------------------- 
 
+# using a dummy to avoid feeding back volumes to PCR before 1st update actually took place
 water_volume_FM_2_PCR = coupling_functions.zeroMapArray(landmask_pcr, missingValuesMap=missing_value_landmask)
+
+# setting PCR's topWaterLayer to 0 for all cells coupled to hydrodynamics (1way)
+model_functions.set_zeroTopWaterlayer(model_pcr, CoupledPCRcellIndices)
 
 # retrieving PCR-GLOBWB and converting it to m3/d
 delta_volume_PCR, delta_volume_PCR_coupled = model_functions.calculateDeltaVolumes(model_pcr, missing_value_pcr, secPerDay, CoupledPCRcellIndices, cellarea_data_pcr, water_volume_FM_2_PCR)
 
 # dividing delta volume from PCR-GLOBWB over hydraulic cells, depending on model specifications
-delta_water_fm, verbose_volume = model_functions.calculateDeltaWater(CouplePCR2model, CoupleModel2PCR, delta_volume_PCR_coupled, cellAreaSpherical_1way, fraction_timestep, model_type, use_Fluxes)
+delta_water_fm, verbose_volume = model_functions.calculateDeltaWater(model_hydr, CouplePCR2model, CoupleModel2PCR, CouplePCR2model_2way, delta_volume_PCR_coupled, coupledFPindices, cellAreaSpherical_1way, CellAreaSpherical_2way, fraction_timestep, model_type, use_Fluxes, verbose_folder, verbose)
 
 #pdb.set_trace()
 
@@ -371,7 +376,7 @@ while model_pcr.get_time_step() < nr_pcr_timesteps:
     #TODO: implement algorithms for negative delta volumes!!!
     
     # dividing delta volume from PCR-GLOBWB over hydraulic cells, depending on model specifications
-    delta_water_fm, verbose_volume = model_functions.calculateDeltaWater(CouplePCR2model, CoupleModel2PCR, delta_volume_PCR_coupled, cellAreaSpherical_1way, fraction_timestep, model_type, use_Fluxes)
+    delta_water_fm, verbose_volume = model_functions.calculateDeltaWater(model_hydr, CouplePCR2model, CoupleModel2PCR, CouplePCR2model_2way, delta_volume_PCR_coupled, coupledFPindices, cellAreaSpherical_1way, CellAreaSpherical_2way, fraction_timestep, model_type, use_Fluxes, verbose_folder, verbose)
 
     # saving PCR-GLOBWB output volumes and volumes used as input to hydraulic models to verbose-folder
     if verbose == True:
