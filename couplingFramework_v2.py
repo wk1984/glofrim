@@ -306,7 +306,7 @@ model_functions.set_zeroTopWaterlayer(model_pcr, CoupledPCRcellIndices)
 delta_volume_PCR, delta_volume_PCR_coupled = model_functions.calculateDeltaVolumes(model_pcr, missing_value_pcr, secPerDay, CoupledPCRcellIndices, cellarea_data_pcr, water_volume_FM_2_PCR)
 
 # dividing delta volume from PCR-GLOBWB over hydraulic cells, depending on model specifications
-delta_water_fm, verbose_volume = model_functions.calculateDeltaWater(model_hydr, CouplePCR2model, CoupleModel2PCR, CouplePCR2model_2way, delta_volume_PCR_coupled, coupledFPindices, cellAreaSpherical_1way, CellAreaSpherical_2way, fraction_timestep, model_type, use_Fluxes, verbose_folder, verbose)
+delta_water_fm, verbose_volume = model_functions.calculateDeltaWater(model_hydr, CouplePCR2model, CoupleModel2PCR, CouplePCR2model_2way, delta_volume_PCR_coupled, coupledFPindices, cellAreaSpherical_1way, cellAreaSpherical_2way, fraction_timestep, model_type, use_Fluxes, verbose_folder, verbose)
 
 #pdb.set_trace()
 
