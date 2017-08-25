@@ -583,6 +583,7 @@ def calculateDeltaWater(model_hydr, CouplePCR2model, CoupleModel2PCR, CouplePCR2
         elif delta_volume_PCR_coupled[i] < 0.:
             print 'delta volume is negative, starting to account for it...'
             #TODO: the function "calculateDeltaWater" is bespoke for the interaction between PCR and DFM/LFP, i.e. 1way; therefore accounting for the feedback loops should be done before entering this function!
+			#TODO: is it really sensible to loop through 1way-coupled PCR-coords and then use 2way PCR-coords to account for negative volumes? Does this numerically work?
             new_WL_hydrodynamics = account4negativeDeltaVolumes(model_hydr, model_type, newWaterLevels, CouplePCR2model_2way, delta_volume_PCR_coupled, i, cellAreaSpherical_2way)
             if model_type == 'DFM':
 			    model_hydr.set_var('s1', new_WL_hydrodynamics)
@@ -834,6 +835,9 @@ def account4negativeDeltaVolumes(model_hydr, model_type, newWaterLevels, CoupleP
 
 	# get current water depths of these cells
 	if model_type == 'DFM':
+		print len(model_hydr.get_var('bl'))
+		print len(current_model_cell_indices)
+		pdb.set_trace()
 		surface_elevation = model_hydr.get_var('bl')
 		current_water_depth = model_hydr.get_var('s1')[current_model_cell_indices] - surface_elevation[current_model_cell_indices]
 	elif model_type == 'LFP':
