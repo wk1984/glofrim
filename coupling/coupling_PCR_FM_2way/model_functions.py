@@ -527,7 +527,7 @@ def calculateDeltaVolumes(model_pcr, missing_value_pcr, secPerDay, CoupledPCRcel
     
 # =============================================================================
 
-def calculateDeltaWater(model_hydr, CouplePCR2model, CoupleModel2PCR, CouplePCR2model_2way, delta_volume_PCR_coupled, coupledFPindices, CellAreaSpherical, CellAreaSpherical_2way, fraction_timestep, model_type, useFluxes, verbose_folder, verbose):
+def calculateDeltaWater(model_hydr, CouplePCR2model, CoupleModel2PCR, CouplePCR2model_2way, delta_volume_PCR_coupled, coupledFPindices, cellAreaSpherical_1way, cellAreaSpherical_2way, fraction_timestep, model_type, useFluxes, verbose_folder, verbose):
     """
     In this function the calculated daily delta volumes [m3/d] is translated to suitable units later to be used in the updating step.
     The input volumes of PCR-GLOBWB are here divided over the number of hydrodynamic cells within each PCR-cell.
@@ -573,7 +573,7 @@ def calculateDeltaWater(model_hydr, CouplePCR2model, CoupleModel2PCR, CouplePCR2
                 current_cell_index = CouplePCR2model[i][1][j]
                    
                 # ...calculate additional water levels [m/day] for current index
-                additional_water_level[current_cell_index] = temp_water_volume / CellAreaSpherical[current_cell_index]
+                additional_water_level[current_cell_index] = temp_water_volume / cellAreaSpherical_1way[current_cell_index]
                 		
 		# ...calculate additional water volume [m3/day] for current index
                 additional_water_volume[current_cell_index] = temp_water_volume  / 1.
