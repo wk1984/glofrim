@@ -376,7 +376,7 @@ while model_pcr.get_time_step() < nr_pcr_timesteps:
     #TODO: implement algorithms for negative delta volumes!!!
     
     # dividing delta volume from PCR-GLOBWB over hydraulic cells, depending on model specifications
-    delta_water_fm, verbose_volume = model_functions.calculateDeltaWater(model_hydr, CouplePCR2model, CoupleModel2PCR, CouplePCR2model_2way, delta_volume_PCR_coupled, coupledFPindices, cellAreaSpherical_1way, CellAreaSpherical_2way, fraction_timestep, model_type, use_Fluxes, verbose_folder, verbose)
+    delta_water_fm, verbose_volume = model_functions.calculateDeltaWater(model_hydr, CouplePCR2model, CoupleModel2PCR, CouplePCR2model_2way, delta_volume_PCR_coupled, coupledFPindices, cellAreaSpherical_1way, cellAreaSpherical_2way, fraction_timestep, model_type, use_Fluxes, verbose_folder, verbose)
 
     # saving PCR-GLOBWB output volumes and volumes used as input to hydraulic models to verbose-folder
     if verbose == True:
