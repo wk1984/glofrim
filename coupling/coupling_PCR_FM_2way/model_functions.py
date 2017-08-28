@@ -809,7 +809,7 @@ def set_zeroTopWaterlayer(model_pcr, CoupledPCRcellIndices, value=0.):
 	
 # =============================================================================
 	
-def account4negativeDeltaVolumes(model_hydr, model_type, CouplePCR2model, delta_volume_PCR, cellAreaSpherical):
+def account4negativeDeltaVolumes(model_hydr, model_type, CoupledPCRcellIndices, CouplePCR2model, delta_volume_PCR, cellAreaSpherical):
 """
 With this function, we loop over all PCR-cells and check whether the delta volume is negative or not. If the former is the case,
 which means that more water is present in DFM/LFP than simulated by PCR, water volume from DFM/LFP is removed until it matches
@@ -910,8 +910,13 @@ the volume as simulated by PCR
                     # -------------------------------------------------------------------
                     
                     # set 'delta volume' to zero (so while-loop will end)
-                    remaining_negative_delta_volume = 0.    
+                    remaining_negative_delta_volume = 0. 
+					# also, set delta volume at this entry to zero for later use in other functions
+					delta_volume_PCR[i] = 0.
 					
+	delta_volume_PCR_positiveOnly = np.copy(delta_volume_PCR)
+	delta_volume_PCR_coupled_positiveOnly = delta_volume_PCR_positiveOnly[zip(*CoupledPCRcellIndices)]
+	
 	if model_type == 'DFM':
 		model_hydr.set_var('s1', new_water_depth)
 	elif model_type == 'LFP':
