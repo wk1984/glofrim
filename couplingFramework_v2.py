@@ -373,11 +373,24 @@ while model_pcr.get_time_step() < nr_pcr_timesteps:
     # retrieving PCR-GLOBWB and converting it to m3/d
     delta_volume_PCR, delta_volume_PCR_coupled = model_functions.calculateDeltaVolumes(model_pcr, missing_value_pcr, secPerDay, CoupledPCRcellIndices, cellarea_data_pcr, water_volume_FM_2_PCR)                                                                                                  
     
-    #TODO: implement algorithms for negative delta volumes!!!
-    
+	# accounting for negative delta volumes
+    if model_type == 'DFM':
+        model_hydr.set_var('s1', new_WL_hydrodynamics)
+    elif model_type == 'LFP':
+	    new_WL_hydrodynamics = fillLFPgrid(model_hydr, coupledFPindices, new_WL_hydrodynamics, newWaterLevels_0, verbose_folder, verbose)
+	    model_hydr.get_var('H')[:] = new_WL_hydrodynamics
+    if model_type == 'DFM':
+        newWaterLevels = np.copy(model_hydr.get_var('s1'))
+    elif model_type == 'LFP':
+        newWaterLevels_0 = model_hydr.get_var('H') + model_hydr.get_var('DEM')
+        newWaterLevels = newWaterLevels_0.ravel()
+		
+    # removing negative delta volumes where necessary
+    delta_volume_PCR_positiveOnly, delta_volume_PCR_coupled_positiveOnly = model_functions.account4negativeDeltaVolumes(model_hydr, model_type, CouplePCR2model_2way, delta_volume_PCR, cellAreaSpherical_2way)
+				                 
     # dividing delta volume from PCR-GLOBWB over hydraulic cells, depending on model specifications
-    delta_water_fm, verbose_volume = model_functions.calculateDeltaWater(model_hydr, CouplePCR2model, CoupleModel2PCR, CouplePCR2model_2way, delta_volume_PCR_coupled, coupledFPindices, cellAreaSpherical_1way, cellAreaSpherical_2way, fraction_timestep, model_type, use_Fluxes, verbose_folder, verbose)
-
+    delta_water_fm, verbose_volume = model_functions.calculateDeltaWater(model_hydr, CouplePCR2model, delta_volume_PCR_coupled_positiveOnly, cellAreaSpherical_1way, fraction_timestep, model_type, use_Fluxes)
+    
     # saving PCR-GLOBWB output volumes and volumes used as input to hydraulic models to verbose-folder
     if verbose == True:
         # aggregate daily totals

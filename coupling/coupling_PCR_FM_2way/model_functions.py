@@ -527,7 +527,7 @@ def calculateDeltaVolumes(model_pcr, missing_value_pcr, secPerDay, CoupledPCRcel
     
 # =============================================================================
 
-def calculateDeltaWater(model_hydr, CouplePCR2model, CoupleModel2PCR, CouplePCR2model_2way, delta_volume_PCR_coupled, coupledFPindices, cellAreaSpherical_1way, cellAreaSpherical_2way, fraction_timestep, model_type, useFluxes, verbose_folder, verbose):
+def calculateDeltaWater(model_hydr, CouplePCR2model, delta_volume_PCR_coupled, cellAreaSpherical_1way, fraction_timestep, model_type, useFluxes):
     """
     In this function the calculated daily delta volumes [m3/d] is translated to suitable units later to be used in the updating step.
     The input volumes of PCR-GLOBWB are here divided over the number of hydrodynamic cells within each PCR-cell.
@@ -542,20 +542,12 @@ def calculateDeltaWater(model_hydr, CouplePCR2model, CoupleModel2PCR, CouplePCR2
     Output:
         - delta state [m/d] or [m/timestep]
         - delta flux [m3/s]
-        
-    IDEA: just use positive delta volumes as input to this function; leave identificaiton of (i.e. if-construction) and accounting for negative volumes to "calculateDeltaVolumes"
     """
     
     #- creating zero arrays to be populated with data    
     additional_water_level = np.zeros(len(CoupleModel2PCR))
     additional_water_volume = np.zeros(len(CoupleModel2PCR))
     verbose_volume = np.zeros(len(CoupleModel2PCR))
-    
-    if model_type == 'DFM':
-	    newWaterLevels = np.copy(model_hydr.get_var('s1'))
-    elif model_type == 'LFP':
-	    newWaterLevels_0 = model_hydr.get_var('H') + model_hydr.get_var('DEM')
-	    newWaterLevels = newWaterLevels_0.ravel()
 
     # loop over all coupled PCR cells
     for i in range(len(CouplePCR2model)):
@@ -581,16 +573,8 @@ def calculateDeltaWater(model_hydr, CouplePCR2model, CoupleModel2PCR, CouplePCR2
                 verbose_volume[current_cell_index] = temp_water_volume  / 1.
                     
         elif delta_volume_PCR_coupled[i] < 0.:
-            print 'delta volume is negative, starting to account for it...'
-            #TODO: the function "calculateDeltaWater" is bespoke for the interaction between PCR and DFM/LFP, i.e. 1way; therefore accounting for the feedback loops should be done before entering this function!
-			#TODO: is it really sensible to loop through 1way-coupled PCR-coords and then use 2way PCR-coords to account for negative volumes? Does this numerically work?
-            new_WL_hydrodynamics = account4negativeDeltaVolumes(model_hydr, model_type, newWaterLevels, CouplePCR2model_2way, delta_volume_PCR_coupled, i, cellAreaSpherical_2way)
-            if model_type == 'DFM':
-			    model_hydr.set_var('s1', new_WL_hydrodynamics)
-            elif model_type == 'LFP':
-				new_WL_hydrodynamics = fillLFPgrid(model_hydr, coupledFPindices, new_WL_hydrodynamics, newWaterLevels_0, verbose_folder, verbose)
-				model_hydr.get_var('H')[:] = new_WL_hydrodynamics
-				                
+			os.sys.exit('\n>>> delta volume should not be negative anymore!<<<\n')
+
     # calculate additional water levels or fluxes based on chosen settings
     if (useFluxes == False) and (model_type == 'DFM'):
         delta_water = additional_water_level / fraction_timestep        # [m/timestep]
@@ -825,42 +809,53 @@ def set_zeroTopWaterlayer(model_pcr, CoupledPCRcellIndices, value=0.):
 	
 # =============================================================================
 	
-def account4negativeDeltaVolumes(model_hydr, model_type, newWaterLevels, CouplePCR2model, delta_volume_PCR_coupled, i, cellAreaSpherical):
-
-	# set variable for remaining negative delta volume
-	remaining_negative_delta_volume = delta_volume_PCR_coupled[i]
+def account4negativeDeltaVolumes(model_hydr, model_type, CouplePCR2model, delta_volume_PCR, cellAreaSpherical):
+"""
+With this function, we loop over all PCR-cells and check whether the delta volume is negative or not. If the former is the case,
+which means that more water is present in DFM/LFP than simulated by PCR, water volume from DFM/LFP is removed until it matches
+the volume as simulated by PCR
+"""
 	
-	# get all coupled FM cells of the current coupled PCR cell
-	current_model_cell_indices = CouplePCR2model[i]
-
-	# get current water depths of these cells
-	if model_type == 'DFM':
-		print len(model_hydr.get_var('bl'))
-		print len(current_model_cell_indices)
-		pdb.set_trace()
-		surface_elevation = model_hydr.get_var('bl')
-		current_water_depth = model_hydr.get_var('s1')[current_model_cell_indices] - surface_elevation[current_model_cell_indices]
-	elif model_type == 'LFP':
-		current_water_depth = model_hydr.get_var('H').ravel()
-		current_water_depth = current_water_depth[current_model_cell_indices]
+	# loop over all coupled PCR cells
+    for i in range(len(CouplePCR2model)):
 		
-	# set variable for tracking water depths
-	new_water_depth = np.copy(current_water_depth)
+		# check whether algorithm needs to be activated
+        if delta_volume_PCR[i] >= 0.:
+			pass 
+        elif delta_volume_PCR[i] < 0.:
+			 
+	        # set variable for remaining negative delta volume
+	        remaining_negative_delta_volume = delta_volume_PCR_coupled[i]
 	
-	# while there is negative delta volume, remove water from wet cells
-	while remaining_negative_delta_volume < 0.:
+	        # get all coupled FM cells of the current coupled PCR cell
+	        current_model_cell_indices = CouplePCR2model[i]
+
+	        # get current water depths of these cells
+	        if model_type == 'DFM':
+		        surface_elevation = model_hydr.get_var('bl')
+		        current_water_depth = model_hydr.get_var('s1')[current_model_cell_indices] - surface_elevation[current_model_cell_indices]
+	        elif model_type == 'LFP':
+		        current_water_depth = model_hydr.get_var('H').ravel()
+		        current_water_depth = current_water_depth[current_model_cell_indices]
 		
-		# find remaining wet cells in PCR cell
-		remaining_wetCell_tempIndices = np.where(new_water_depth > 0.)[0]
-		remaining_wetCell_totalIndices = current_model_cell_indices[remaining_wetCell_tempIndices]
+	        # set variable for tracking water depths
+	        new_water_depth = np.copy(current_water_depth)
+	
+	        # while there is negative delta volume, remove water from wet cells
+	        while remaining_negative_delta_volume < 0.:
 		
-		# if no remaining wet cells can be found, stop while
-		if len(remaining_wetCell_tempIndices) == 0.:
-			break
+		        # find remaining wet cells in PCR cell
+		        remaining_wetCell_tempIndices = np.where(new_water_depth > 0.)[0]
+		        remaining_wetCell_totalIndices = current_model_cell_indices[remaining_wetCell_tempIndices]
+		
+		        # if no remaining wet cells can be found, stop while
+		        if len(remaining_wetCell_tempIndices) == 0.:
+			        break
+			    else:
 			
-		# find cell with least water depth
-		min_water_depth_value = np.min(new_water_depth[remaining_wetCell_tempIndices])
-		min_water_depth_index = np.argmin(new_water_depth[remaining_wetCell_tempIndices])
+		            # find cell with least water depth
+		            min_water_depth_value = np.min(new_water_depth[remaining_wetCell_tempIndices])
+		            min_water_depth_index = np.argmin(new_water_depth[remaining_wetCell_tempIndices])
 		
 		# determine total volume that can be removed from hydrodynamics
 		total_removable_volume = np.sum(min_water_depth_value * cellAreaSpherical[remaining_wetCell_totalIndices])
@@ -915,4 +910,4 @@ def account4negativeDeltaVolumes(model_hydr, model_type, newWaterLevels, CoupleP
 	elif model_type == 'LFP':
 		newWaterLevels_set[current_model_cell_indices] = new_water_depth
 			
-	return newWaterLevels_set
+	return delta_volume_PCR_positiveOnly, delta_volume_PCR_coupled_positiveOnly
