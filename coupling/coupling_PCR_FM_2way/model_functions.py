@@ -815,99 +815,106 @@ With this function, we loop over all PCR-cells and check whether the delta volum
 which means that more water is present in DFM/LFP than simulated by PCR, water volume from DFM/LFP is removed until it matches
 the volume as simulated by PCR
 """
-	
+
+	if model_type == 'DFM':
+		water_level_DFM = model_hydr.get_var('s1')
+	elif model_type == 'LFP':
+		water_depth_LFP = model_hydr.get_var('H')
+			
 	# loop over all coupled PCR cells
     for i in range(len(CouplePCR2model)):
 		
 		# check whether algorithm needs to be activated
         if delta_volume_PCR[i] >= 0.:
 			pass 
+			
         elif delta_volume_PCR[i] < 0.:
 			 
 	        # set variable for remaining negative delta volume
-	        remaining_negative_delta_volume = delta_volume_PCR_coupled[i]
+	        remaining_negative_delta_volume = delta_volume_PCR[i]
 	
 	        # get all coupled FM cells of the current coupled PCR cell
 	        current_model_cell_indices = CouplePCR2model[i]
 
-	        # get current water depths of these cells
+	        # get current water levels/depths of these cells
 	        if model_type == 'DFM':
-		        surface_elevation = model_hydr.get_var('bl')
-		        current_water_depth = model_hydr.get_var('s1')[current_model_cell_indices] - surface_elevation[current_model_cell_indices]
+		        current_water_depth = water_level_DFM[current_model_cell_indices]
 	        elif model_type == 'LFP':
-		        current_water_depth = model_hydr.get_var('H').ravel()
-		        current_water_depth = current_water_depth[current_model_cell_indices]
+		        current_water_depth = water_depth_LFP[current_model_cell_indices]
 		
 	        # set variable for tracking water depths
 	        new_water_depth = np.copy(current_water_depth)
 	
 	        # while there is negative delta volume, remove water from wet cells
-	        while remaining_negative_delta_volume < 0.:
-		
-		        # find remaining wet cells in PCR cell
-		        remaining_wetCell_tempIndices = np.where(new_water_depth > 0.)[0]
-		        remaining_wetCell_totalIndices = current_model_cell_indices[remaining_wetCell_tempIndices]
-		
-		        # if no remaining wet cells can be found, stop while
-		        if len(remaining_wetCell_tempIndices) == 0.:
-			        break
-			    else:
-			
-		            # find cell with least water depth
-		            min_water_depth_value = np.min(new_water_depth[remaining_wetCell_tempIndices])
-		            min_water_depth_index = np.argmin(new_water_depth[remaining_wetCell_tempIndices])
-		
-		# determine total volume that can be removed from hydrodynamics
-		total_removable_volume = np.sum(min_water_depth_value * cellAreaSpherical[remaining_wetCell_totalIndices])
-		
-		# check whether the total removable volume is sufficient to match remaining negative volume
-		if (-1 * remaining_negative_delta_volume) > total_removable_volume:
-		
-			# remove water from all wet cells
-			new_water_depth[remaining_wetCell_tempIndices] -= min_water_depth_value
-			
-			# update remaining delta volume accordingly
-			remaining_negative_delta_volume += total_removable_volume
-		
-		# if removable volume exceeds remaining negative volume, remove less
-		else:
-			
-			# calculate water depths that would need to be removed to match remaining negative volume
-			remove_water_depths_extra = (remaining_negative_delta_volume / len(remaining_wetCell_tempIndices)) / cellAreaSpherical[remaining_wetCell_totalIndices]
-			
-			# remove water from all wet cells
-			new_water_depth[remaining_wetCell_tempIndices] += remove_water_depths_extra
-			
-			# check if there are any negative water depths
-			# not because they were a numerical issue, but because this means that more water is locally removed than required, and less at another location
-			while any(new_water_depth < 0.):
-			
-				# reset negative depths to 0
-				temp_vol = 0.
-				for k in xrange(len(new_water_depth)):
-					if new_water_depth[k] < 0.:
-						temp_vol -= (-1 * new_water_depth[k]) * cellAreaSpherical[current_model_cell_indices[k]]
-						new_water_depth[k] = 0.
-						
-				# adding back volumes
-				remaining_negative_delta_volume = temp_vol
-				
-				# fining remaining wet cells
-				remaining_wetCell_tempIndices = np.where(new_water_depth > 0.)[0]
-				remaining_wetCell_totalIndices = current_model_cell_indices[remaining_wetCell_tempIndices]
-				
-				# calculate additional water depth to be removed to match remaining volume
-				remove_water_depths_extra = (remaining_negative_delta_volume / len(remaining_wetCell_tempIndices)) / cellAreaSpherical(remaining_wetCell_totalIndices)
-				
-				# remove water from all wet cells
-				new_water_depth[remaining_wetCell_tempIndices] += remove_water_depths_extra
-				
-			# set delta volume to zero to end while-loop
-			remaining_negative_delta_volume = 0.
-			
+	        while remaining_negative_delta_volume < 0:
+                
+                # find remaining wet cells
+                remaining_wet_cells_temp_indices  = np.where(new_water_depth > 0.)[0]
+                remaining_wet_cells_total_indices = current_cell_indices[remaining_wet_cells_temp_indices]
+                
+                # if no remaining wet cells are found, no more water can be removed and the while-loop should stop
+                # this probably means that the remaining delta volume is very low (but still just above zero)
+                if len(remaining_wet_cells_temp_indices) != 0:
+                    pass
+                else:
+                    break
+                
+                # find cell with least amount of water
+                min_water_depth_value = np.min(new_water_depth[remaining_wet_cells_temp_indices])
+                min_water_depth_index = np.argmin(new_water_depth[remaining_wet_cells_temp_indices])
+                
+                # calculate the total volume that is about to be removed from FM
+                total_volume_about_to_be_removed = np.sum(min_water_depth_value  * cellAreaSpherical[remaining_wet_cells_total_indices])
+                    
+                # check if removing this from all wet cells will not exceed the remaining 'delta volume'
+                if (-1 * remaining_negative_delta_volume) > total_volume_about_to_be_removed:
+                    
+                    # remove water from all wet cells
+                    new_water_depth[remaining_wet_cells_temp_indices] -= min_water_depth_value
+                    
+                    # remove corresponding volume from remaining 'delta volume'
+                    remaining_negative_delta_volume+= total_volume_about_to_be_removed
+                    
+                # or, if volume to be removed would exceed 'delta volume', remove less than this instead
+                else:
+                    
+                    # calculate additional water depths to be removed from all wet cells to reach remaining delta volume
+                    remove_water_depths_extra = (remaining_negative_delta_volume/len(remaining_wet_cells_temp_indices)) / cellAreaSpherical[remaining_wet_cells_total_indices]
+                    
+                    # remove water from all wet cells
+                    new_water_depth[remaining_wet_cells_temp_indices] += remove_water_depths_extra
+                    
+                    # check if there are negative water depths, and if so, repeat process
+                    # -------------------------------------------------------------------
+                    while any(new_water_depth < 0):
+                        
+                        # reset negative water depths to zero and count the 'missing' volume
+                        temp_vol_was_negative = 0
+                        for k in range(len(new_water_depth)):
+                            if new_water_depth[k] < 0:
+                                temp_vol_was_negative -= (new_water_depth[k] * -1) * cellAreaSpherical[current_model_cell_indices[k]]
+                                new_water_depth[k] = 0.
+                                
+                        # this represents the volume that is being 'added back' to the delta volume to then be removed again from wet cells
+                        remaining_negative_delta_volume = temp_vol_was_negative
+                        
+                        # find remaining wet cells
+                        remaining_wet_cells_temp_indices  = np.where(new_water_depth> 0.)[0]
+                        remaining_wet_cells_total_indices = current_model_cell_indices[remaining_wet_cells_temp_indices]
+                        
+                        # calculate additional water depths to be removed from all wet cells to reach remaining delta volume
+                        remove_water_depths_extra = (remaining_negative_delta_volume/len(remaining_wet_cells_temp_indices)) / cellAreaSpherical[remaining_wet_cells_total_indices]
+                            
+                        # remove water from all wet cells
+                        new_water_depth[remaining_wet_cells_temp_indices] += remove_water_depths_extra
+                    # -------------------------------------------------------------------
+                    
+                    # set 'delta volume' to zero (so while-loop will end)
+                    remaining_negative_delta_volume = 0.    
+					
 	if model_type == 'DFM':
-		newWaterLevels_set[current_model_cell_indices] = surface_elevation[current_model_cell_indices] + new_water_depth
+		model_hydr.set_var('s1', new_water_depth)
 	elif model_type == 'LFP':
-		newWaterLevels_set[current_model_cell_indices] = new_water_depth
+		model_hydr.get_var('H')[:] = new_water_depth
 			
 	return delta_volume_PCR_positiveOnly, delta_volume_PCR_coupled_positiveOnly
