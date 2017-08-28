@@ -817,6 +817,10 @@ def account4negativeDeltaVolumes(model_hydr, model_type, CoupledPCRcellIndices, 
 	"""
 	
 	delta_volume_PCR = delta_volume_PCR_2dArray[zip(*CoupledPCRcellIndices_2way)]
+	print 'len delta_volume_PCR', len(delta_volume_PCR)
+	print 'len CoupledPCRcellIndices_2way',len(CoupledPCRcellIndices_2way)
+	print 'len CoupledPCRcellIndices',len(CoupledPCRcellIndices)
+	print 'len + shape inputVolume', len(delta_volume_PCR_2dArray), np.shape(delta_volume_PCR_2dArray)
 
 	if model_type == 'DFM':
 		water_level_DFM = model_hydr.get_var('s1')
@@ -915,13 +919,17 @@ def account4negativeDeltaVolumes(model_hydr, model_type, CoupledPCRcellIndices, 
 					remaining_negative_delta_volume = 0. 
 					# also, set delta volume at this entry to zero for later use in other functions
 					delta_volume_PCR[i] = 0.
-					
-	delta_volume_PCR_positiveOnly = np.copy(delta_volume_PCR)
-	delta_volume_PCR_coupled_positiveOnly = delta_volume_PCR_positiveOnly[zip(*CoupledPCRcellIndices)]
 	
-	if model_type == 'DFM':
-		model_hydr.set_var('s1', new_water_depth)
-	elif model_type == 'LFP':
-		model_hydr.get_var('H')[:] = new_water_depth
+			if model_type == 'DFM':
+				model_hydr.set_var('s1', new_water_depth)
+			elif model_type == 'LFP':
+				model_hydr.get_var('H')[:] = new_water_depth
+				
+	delta_volume_PCR_positiveOnly = np.copy(delta_volume_PCR)
+	print 'shape + len delta_volume_PCR_positiveOnly', np.shape(delta_volume_PCR_positiveOnly), len(delta_volume_PCR_positiveOnly)
+	# we only have flattened array for all cells, but not one specifically for all PCR cells coupled to a river
+	#TODO: needs to be implemented still!
+	#delta_volume_PCR_coupled_positiveOnly = delta_volume_PCR_positiveOnly[zip(*CoupledPCRcellIndices)]
+	#print 'shape + len delta_volume_PCR_coupled_positiveOnly', np.shape(delta_volume_PCR_coupled_positiveOnly), len(delta_volume_PCR_coupled_positiveOnly)
 			
-	return delta_volume_PCR_positiveOnly, delta_volume_PCR_coupled_positiveOnly
+	return delta_volume_PCR_positiveOnly
