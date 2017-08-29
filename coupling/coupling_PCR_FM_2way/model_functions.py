@@ -935,6 +935,7 @@ def account4negativeDeltaVolumes(model_hydr, model_type, CoupledPCRcellIndices, 
 				# also, set delta volume at this entry to zero for later use in other functions
 				delta_volume_PCR[i] = 0.
 	
+			#TODO: maybe the SAAD error is related to wrong/weird water levels set back to DFM?
 			if model_type == 'DFM':
 				model_hydr.set_var('s1', new_water_depth)
 			elif model_type == 'LFP':
