@@ -306,10 +306,10 @@ model_functions.set_zeroTopWaterlayer(model_pcr, CoupledPCRcellIndices)
 delta_volume_PCR, delta_volume_PCR_coupled = model_functions.calculateDeltaVolumes(model_pcr, missing_value_pcr, secPerDay, CoupledPCRcellIndices, cellarea_data_pcr, water_volume_FM_2_PCR)
 
 # removing negative delta volumes where necessary
-delta_volume_PCR_positiveOnly = model_functions.account4negativeDeltaVolumes(model_hydr, model_type, CoupledPCRcellIndices, CoupledPCRcellIndices_2way, CouplePCR2model_2way, delta_volume_PCR, cellAreaSpherical_2way)
+delta_volume_PCR_positiveOnly, delta_volume_PCR_coupled_positiveOnly = model_functions.account4negativeDeltaVolumes(model_hydr, model_type, CoupledPCRcellIndices, CoupledPCRcellIndices_2way, CouplePCR2model_2way, delta_volume_PCR, cellAreaSpherical_2way)
 
 # dividing delta volume from PCR-GLOBWB over hydraulic cells, depending on model specifications
-delta_water_fm, verbose_volume = model_functions.calculateDeltaWater(model_hydr, CouplePCR2model, delta_volume_PCR_coupled, cellAreaSpherical_1way, fraction_timestep, model_type, use_Fluxes)
+delta_water_fm, verbose_volume = model_functions.calculateDeltaWater(model_hydr, CoupleModel2PCR, CouplePCR2model, delta_volume_PCR_coupled_positiveOnly, cellAreaSpherical_1way, fraction_timestep, model_type, use_Fluxes)
 
 #pdb.set_trace()
 
@@ -377,10 +377,10 @@ while model_pcr.get_time_step() < nr_pcr_timesteps:
     delta_volume_PCR, delta_volume_PCR_coupled = model_functions.calculateDeltaVolumes(model_pcr, missing_value_pcr, secPerDay, CoupledPCRcellIndices, cellarea_data_pcr, water_volume_FM_2_PCR)                                                                                                  
     
     # removing negative delta volumes where necessary
-    delta_volume_PCR_positiveOnly = model_functions.account4negativeDeltaVolumes(model_hydr, model_type, CoupledPCRcellIndices, CoupledPCRcellIndices_2way, CouplePCR2model_2way, delta_volume_PCR, cellAreaSpherical_2way)
+    delta_volume_PCR_positiveOnly, delta_volume_PCR_coupled_positiveOnly = model_functions.account4negativeDeltaVolumes(model_hydr, model_type, CoupledPCRcellIndices, CoupledPCRcellIndices_2way, CouplePCR2model_2way, delta_volume_PCR, cellAreaSpherical_2way)
 				                 
     # dividing delta volume from PCR-GLOBWB over hydraulic cells, depending on model specifications
-    delta_water_fm, verbose_volume = model_functions.calculateDeltaWater(model_hydr, CouplePCR2model, delta_volume_PCR_coupled, cellAreaSpherical_1way, fraction_timestep, model_type, use_Fluxes)
+    delta_water_fm, verbose_volume = model_functions.calculateDeltaWater(model_hydr, CoupleModel2PCR, CouplePCR2model, delta_volume_PCR_coupled_positiveOnly, cellAreaSpherical_1way, fraction_timestep, model_type, use_Fluxes)
     
     # saving PCR-GLOBWB output volumes and volumes used as input to hydraulic models to verbose-folder
     if verbose == True:

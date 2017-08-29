@@ -278,7 +278,7 @@ def fillLFPgrid(model, indices_list, value_list, array_in, verbose_folder, verbo
         print 'number of cells in filled LFP-grid that were filled', len((np.where(filled_map > 0.0))[1])
         fig = plt.figure()
         plt.imshow(test_map)
-        plt.savefig(os.path.join(verbose_folder, 'filledFPgrid_testGrid.png'))
+        plt.savefig(os.path.join(verbose_folder, 'filledGrid'+str(value_list)+'.png'))
         plt.close(fig) 
 
     return filled_map
@@ -527,7 +527,7 @@ def calculateDeltaVolumes(model_pcr, missing_value_pcr, secPerDay, CoupledPCRcel
     
 # =============================================================================
 
-def calculateDeltaWater(model_hydr, CouplePCR2model, delta_volume_PCR_coupled, cellAreaSpherical_1way, fraction_timestep, model_type, useFluxes):
+def calculateDeltaWater(model_hydr, CoupleModel2PCR, CouplePCR2model, delta_volume_PCR_coupled, cellAreaSpherical_1way, fraction_timestep, model_type, useFluxes):
     """
     In this function the calculated daily delta volumes [m3/d] is translated to suitable units later to be used in the updating step.
     The input volumes of PCR-GLOBWB are here divided over the number of hydrodynamic cells within each PCR-cell.
@@ -820,7 +820,7 @@ def account4negativeDeltaVolumes(model_hydr, model_type, CoupledPCRcellIndices, 
 	print 'len delta_volume_PCR', len(delta_volume_PCR)
 	print 'len CoupledPCRcellIndices_2way',len(CoupledPCRcellIndices_2way)
 	print 'len CoupledPCRcellIndices',len(CoupledPCRcellIndices)
-	print 'len + shape inputVolume', len(delta_volume_PCR_2dArray), np.shape(delta_volume_PCR_2dArray)
+	print 'len + shape inputVolume', len(delta_volume_PCR_2dArray), len(delta_volume_PCR_2dArray[1]), np.shape(delta_volume_PCR_2dArray)
 
 	if model_type == 'DFM':
 		water_level_DFM = model_hydr.get_var('s1')
@@ -844,6 +844,7 @@ def account4negativeDeltaVolumes(model_hydr, model_type, CoupledPCRcellIndices, 
 
 	        # get current water levels/depths of these cells
 			if model_type == 'DFM':
+				pdb.set_trace()
 				current_water_depth = water_level_DFM[current_model_cell_indices]
 			elif model_type == 'LFP':
 				current_water_depth = water_depth_LFP[current_model_cell_indices]
@@ -927,9 +928,9 @@ def account4negativeDeltaVolumes(model_hydr, model_type, CoupledPCRcellIndices, 
 				
 	delta_volume_PCR_positiveOnly = np.copy(delta_volume_PCR)
 	print 'shape + len delta_volume_PCR_positiveOnly', np.shape(delta_volume_PCR_positiveOnly), len(delta_volume_PCR_positiveOnly)
-	# we only have flattened array for all cells, but not one specifically for all PCR cells coupled to a river
-	#TODO: needs to be implemented still!
-	#delta_volume_PCR_coupled_positiveOnly = delta_volume_PCR_positiveOnly[zip(*CoupledPCRcellIndices)]
-	#print 'shape + len delta_volume_PCR_coupled_positiveOnly', np.shape(delta_volume_PCR_coupled_positiveOnly), len(delta_volume_PCR_coupled_positiveOnly)
+	delta_volume_PCR_positiveOnly_2d = fillLFPgrid(model_hydr, CoupledPCRcellIndices_2way, delta_volume_PCR_positiveOnly, delta_volume_PCR_2dArray, verbose_folder=None, verbose=False)
+	delta_volume_PCR_coupled_positiveOnly = delta_volume_PCR_positiveOnly_2d[zip(*CoupledPCRcellIndices)]
+	print 'shape + len delta_volume_PCR_coupled_positiveOnly', np.shape(delta_volume_PCR_coupled_positiveOnly), len(delta_volume_PCR_coupled_positiveOnly)
+	print 'diff', np.where(delta_volume_PCR_coupled_positiveOnly != delta_volume_PCR)
 			
-	return delta_volume_PCR_positiveOnly
+	return delta_volume_PCR_positiveOnly, delta_volume_PCR_coupled_positiveOnly
