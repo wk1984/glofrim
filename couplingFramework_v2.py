@@ -284,7 +284,7 @@ model_functions.noLDD(model_pcr, CoupledPCRcellIndices, verbose_folder, verbose)
 # ACTIVATING A RANGE OF VARIABLES SPECIFICALLY REQUIRED FOR 2WAY-COUPLING
 # -------------------------------------------------------------------------------------------------
 
-#TODO: applying the function here leads to tremendous increase of water volume coupled from PCR to DFM
+#applying the function here leads to tremendous increase of water volume coupled from PCR to DFM
 #model_functions.activate2wayVariables(model_pcr, CoupledPCRcellIndices)
 
 model_functions.adjust_iniGR(model_pcr, adjust_initial_groundwater_file, CoupledPCRcellIndices_2way, adjust_initial_groundwater=False) # optional, if adjust_initial_groundwater is set to True
@@ -310,8 +310,6 @@ delta_volume_PCR_positiveOnly, delta_volume_PCR_coupled_positiveOnly = model_fun
 
 # dividing delta volume from PCR-GLOBWB over hydraulic cells, depending on model specifications
 delta_water_fm, verbose_volume = model_functions.calculateDeltaWater(model_hydr, CoupleModel2PCR, CouplePCR2model, delta_volume_PCR_coupled_positiveOnly, cellAreaSpherical_1way, fraction_timestep, model_type, use_Fluxes)
-
-#pdb.set_trace()
 
 # saving PCR-GLOBWB output volumes and volumes used as input to hydraulic models to verbose-folder
 if verbose == True:
