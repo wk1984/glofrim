@@ -305,15 +305,8 @@ model_functions.set_zeroTopWaterlayer(model_pcr, CoupledPCRcellIndices)
 # retrieving PCR-GLOBWB and converting it to m3/d
 delta_volume_PCR, delta_volume_PCR_coupled = model_functions.calculateDeltaVolumes(model_pcr, missing_value_pcr, secPerDay, CoupledPCRcellIndices, cellarea_data_pcr, water_volume_FM_2_PCR)
 
-print ''
-print np.sum(delta_volume_PCR_coupled)
-
 # removing negative delta volumes where necessary
 delta_volume_PCR_positiveOnly, delta_volume_PCR_coupled_positiveOnly = model_functions.account4negativeDeltaVolumes(model_hydr, model_type, CoupledPCRcellIndices, CoupledPCRcellIndices_2way, CouplePCR2model_2way, delta_volume_PCR, cellAreaSpherical_2way)
-
-print ''
-print np.sum(delta_volume_PCR_coupled_positiveOnly)
-print ''
 
 # dividing delta volume from PCR-GLOBWB over hydraulic cells, depending on model specifications
 delta_water_fm, verbose_volume = model_functions.calculateDeltaWater(model_hydr, CoupleModel2PCR, CouplePCR2model, delta_volume_PCR_coupled_positiveOnly, cellAreaSpherical_1way, fraction_timestep, model_type, use_Fluxes)
@@ -344,8 +337,6 @@ if model_type == 'LFP':
 # FIRST UPDATE (DAY 1)
 # -------------------------------------------------------------------------------------------------
 
-print '\n>>> update 1 started <<<\n'
-
 # updating arrays with computed additional volumes; array used depends on model specifications
 if (model_type == 'LFP'):
     model_functions.updateModel(model_hydr, delta_water_fm, update_step, separator_1D, use_Fluxes, use_RFS, model_type, verbose)
@@ -374,6 +365,8 @@ while model_pcr.get_time_step() < nr_pcr_timesteps:
 
     # DETERMINING NEW STORAGE IN PCR-CHANNELS
     new_storage_pcr = model_functions.determine_new_channelStoragePCR(model_pcr, landmask_pcr, missing_value_landmask, water_volume_FM_2_PCR)
+    print 'water storage added back to PCR ', np.sum(new_storage_pcr)
+    print ''
     
     # UPDATE VARIABLES IN PCR
     model_functions.updateHydrologicVariables(model_pcr, water_depths_FM_2_PCR, inundated_fraction_FM_2_PCR, new_storage_pcr)
@@ -381,15 +374,8 @@ while model_pcr.get_time_step() < nr_pcr_timesteps:
     # retrieving PCR-GLOBWB and converting it to m3/d
     delta_volume_PCR, delta_volume_PCR_coupled = model_functions.calculateDeltaVolumes(model_pcr, missing_value_pcr, secPerDay, CoupledPCRcellIndices, cellarea_data_pcr, water_volume_FM_2_PCR) 
 	
-    print ''
-    print np.sum(delta_volume_PCR_coupled)
-
     # removing negative delta volumes where necessary
     delta_volume_PCR_positiveOnly, delta_volume_PCR_coupled_positiveOnly = model_functions.account4negativeDeltaVolumes(model_hydr, model_type, CoupledPCRcellIndices, CoupledPCRcellIndices_2way, CouplePCR2model_2way, delta_volume_PCR, cellAreaSpherical_2way)
-    
-    print ''
-    print np.sum(delta_volume_PCR_coupled_positiveOnly)
-    print ''
 				                 
     # dividing delta volume from PCR-GLOBWB over hydraulic cells, depending on model specifications
     delta_water_fm, verbose_volume = model_functions.calculateDeltaWater(model_hydr, CoupleModel2PCR, CouplePCR2model, delta_volume_PCR_coupled_positiveOnly, cellAreaSpherical_1way, fraction_timestep, model_type, use_Fluxes)
