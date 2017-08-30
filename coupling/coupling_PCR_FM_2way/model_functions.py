@@ -826,11 +826,13 @@ def account4negativeDeltaVolumes(model_hydr, model_type, CoupledPCRcellIndices, 
 	print '\ndelta volume before accounting ', np.sum(delta_volume_PCR)
 	# printing total number of PCR cells that have a negative delta volume for the current time step
 	print 'number cells with negative volume before accounting ', len(np.where(delta_volume_PCR < 0.)[0])
+	
 	# writing all those entries to a list
 	negative_entries = np.where(delta_volume_PCR < 0.)[0]
 	PCRcellindicesnegative = []
 	for q in xrange(len(negative_entries)):
 		PCRcellindicesnegative.append(negative_entries[q])
+		
 	# printing the entry number of those PCR cells with a negative delta volume
 	print 'entries fo cells with negative volume before accounting ', PCRcellindicesnegative
 	print ''
@@ -961,15 +963,15 @@ def account4negativeDeltaVolumes(model_hydr, model_type, CoupledPCRcellIndices, 
 			delta_volume_PCR_positiveOnly[i] = 0.
 	
 			#TODO: maybe the SAAD error is related to wrong/weird water levels set back to DFM?
-			if model_type == 'DFM':
-				model_hydr.set_var('s1', new_water_depth)
-			elif model_type == 'LFP':
-				model_hydr.get_var('H')[:] = new_water_depth
+#			if model_type == 'DFM':
+#				model_hydr.set_var('s1', new_water_depth)
+#			elif model_type == 'LFP':
+#				model_hydr.get_var('H')[:] = new_water_depth
 		
 	for r in xrange(len(PCRcellindicesnegative)):
 		print 'new delta volume at previously negative entry ',PCRcellindicesnegative[r],'is ', delta_volume_PCR_positiveOnly[PCRcellindicesnegative[r]]
 	print '\ndelta volume after accounting ', np.sum(delta_volume_PCR_positiveOnly)
-	print 'difference in delta volumes before/after accounting ', np.sum(delta_volume_PCR) - np.sum(delta_volume_PCR_positiveOnly)
+	print 'difference in delta volumes before/after accounting ', np.absolute(np.sum(delta_volume_PCR)) - np.absolute(np.sum(delta_volume_PCR_positiveOnly))
 	print ''
 	
 	# reshape the list to an array with shape of PCR map
@@ -978,6 +980,6 @@ def account4negativeDeltaVolumes(model_hydr, model_type, CoupledPCRcellIndices, 
 	# converting array with PCR map dimensions to list containing only those entries coupled to a 1-D hydrodynamic cell 
 	delta_volume_PCR_coupled_positiveOnly = delta_volume_PCR_positiveOnly_2d[zip(*CoupledPCRcellIndices)]
 	
-	pdb.set_trace()
+#	pdb.set_trace()
 		
 	return delta_volume_PCR_positiveOnly, delta_volume_PCR_coupled_positiveOnly
