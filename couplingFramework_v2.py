@@ -365,8 +365,6 @@ while model_pcr.get_time_step() < nr_pcr_timesteps:
 
     # DETERMINING NEW STORAGE IN PCR-CHANNELS
     new_storage_pcr = model_functions.determine_new_channelStoragePCR(model_pcr, landmask_pcr, missing_value_landmask, water_volume_FM_2_PCR)
-    print 'water storage added back to PCR ', np.sum(new_storage_pcr)
-    print ''
     
     # UPDATE VARIABLES IN PCR
     model_functions.updateHydrologicVariables(model_pcr, water_depths_FM_2_PCR, inundated_fraction_FM_2_PCR, new_storage_pcr)
@@ -379,6 +377,8 @@ while model_pcr.get_time_step() < nr_pcr_timesteps:
 				                 
     # dividing delta volume from PCR-GLOBWB over hydraulic cells, depending on model specifications
     delta_water_fm, verbose_volume = model_functions.calculateDeltaWater(model_hydr, CoupleModel2PCR, CouplePCR2model, delta_volume_PCR_coupled_positiveOnly, cellAreaSpherical_1way, fraction_timestep, model_type, use_Fluxes)
+    
+    pdb.set_trace()
     
     # saving PCR-GLOBWB output volumes and volumes used as input to hydraulic models to verbose-folder
     if verbose == True:
