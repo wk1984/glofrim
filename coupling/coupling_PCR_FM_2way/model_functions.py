@@ -419,6 +419,8 @@ def noStorage(model_pcr, missing_value_pcr, CoupledPCRcellIndices, CouplePCR2mod
 def updateHydrologicVariables(model_pcr, water_depths_floodplains_FM_2_PCR, inundated_fraction_floodplains_FM_2_PCR, new_channelStorage_pcr):
     """
     This functions update variables in the hydrologic models based on hydrodynamics
+    
+    TO DO: the water volume that is coupled back seems very large!
     """
 
     # add water from FM floodplains back to PCR
@@ -431,6 +433,7 @@ def updateHydrologicVariables(model_pcr, water_depths_floodplains_FM_2_PCR, inun
     
     # add water from FM rivers back to PCR
     print 'water volume added to channelStorage in PCR %.2E' % np.sum(new_channelStorage_pcr)
+    print ''
     model_pcr.set_var(('routing','channelStorage'), new_channelStorage_pcr)
         
 #    	 # assuming this in not required anymore if RFS is implemented differently than in Arjen's version
@@ -510,17 +513,17 @@ def calculateDeltaVolumes(model_pcr, missing_value_pcr, secPerDay, CoupledPCRcel
     
     # Step 2: deterime total input volume from PCR-GLOBWB that should be present at this time step
     water_volume_PCR_total_in = water_volume_PCR_rivers + water_volume_PCR_runoff + water_volume_PCR_waterlayer
-    print 'delta volume before adding back from FM: %.2E' % np.sum(water_volume_PCR_total_in)
+    print '\ndelta volume before adding back from FM: %.2E' % np.sum(water_volume_PCR_total_in)
     
     # Step 3: remove water volume already present in PCR-GLOBWB from previous time step to obtain delta volume
     delta_volume_PCR = water_volume_PCR_total_in - water_volume_FM_2_PCR
     print 'adding back from FM ', np.sum(water_volume_FM_2_PCR)
     print 'delta volume after adding back from FM: %.2E' % np.sum(delta_volume_PCR)
-    print 'relative reduction compared to no adding back %.2E' % (np.sum(delta_volume_PCR) / np.sum(water_volume_PCR_total_in))
+    print 'relative reduction compared to no adding back', np.round((1-(np.sum(delta_volume_PCR) / np.sum(water_volume_PCR_total_in)))*100., 2), '%'
        
     # Step 4: clip to coupled PCR-GLOBWB cells only
     delta_volume_PCR_coupled = delta_volume_PCR[zip(*CoupledPCRcellIndices)]
-    print 'delta volume for coupled cells only %.2E' % np.sum(delta_volume_PCR_coupled)
+    print 'delta volume for 1way-coupled cells only %.2E' % np.sum(delta_volume_PCR_coupled)
     
     #if np.round(np.sum(water_volume_PCR_total_in[zip(*CoupledPCRcellIndices)]) - np.sum(water_volume_FM_2_PCR[zip(*CoupledPCRcellIndices)]), decimals=-6) != np.round(np.sum(delta_volume_PCR_coupled), decimals=-6):
     if ((np.sum(water_volume_PCR_total_in[zip(*CoupledPCRcellIndices)]) - np.sum(water_volume_FM_2_PCR[zip(*CoupledPCRcellIndices)])) / np.sum(delta_volume_PCR_coupled) < 0.95) or \
@@ -783,6 +786,10 @@ def activate_floodplain_infiltration_factor(model_pcr, CoupledPCRcellIndices, us
 # =============================================================================
 
 def determine_new_channelStoragePCR(model_pcr, landmask_pcr, missing_value_landmask, water_volume_FM_2_PCR):
+	"""
+	TO DO: does it make sense to use channel storage here as we add it to all types of PCR cells, not only channels?
+	would it not be an idea to use surfaceWaterStorage [m] instead?
+	"""
 	
 	current_channelStorage_pcr  = model_pcr.get_var(('routing','channelStorage'))
 
@@ -820,6 +827,9 @@ def account4negativeDeltaVolumes(model_hydr, model_type, CoupledPCRcellIndices, 
 	With this function, we loop over all PCR-cells and check whether the delta volume is negative or not. If the former is the case,
 	which means that more water is present in DFM/LFP than simulated by PCR, water volume from DFM/LFP is removed until it matches
 	the volume as simulated by PCR
+	
+	TO DO: instead of updating water level
+	
 	"""
 	
 	# converting array with PCR map dimensions to list containing only those entries coupled to a 2-D hydrodynamic cell
@@ -829,7 +839,7 @@ def account4negativeDeltaVolumes(model_hydr, model_type, CoupledPCRcellIndices, 
 	delta_volume_PCR_positiveOnly = np.copy(delta_volume_PCR_ini)
 	
 	# printing the total delta volume for all PCR cells coupled to a 2-D hydrodynamic cell
-	print '\ndelta volume before accounting %.2E' % np.sum(delta_volume_PCR)
+	print '\ndelta volume for 2way-coupled cells before accounting %.2E' % np.sum(delta_volume_PCR)
 	# printing total number of PCR cells that have a negative delta volume for the current time step
 	print 'number cells with negative volume before accounting ', len(np.where(delta_volume_PCR < 0.)[0])
 	
