@@ -109,6 +109,8 @@ if latlon == False:
 	inProj  = pyproj.Proj(init=config.model_settings['model_projection'])
 use_Fluxes = strtobool(config.general_settings['use_Fluxes'])
 use_RFS = strtobool(config.general_settings['use_RFS'])
+if use_RFS == False:
+	sys.exit('running GLOFRIM with RFS deactivated not possible anymore... Bummer!')
 verbose = strtobool(config.general_settings['verbose'])
 use_floodplain_infiltration_factor = strtobool(config.general_settings['use_floodplain_infiltration_factor'])
 adjust_initial_groundwater = strtobool(config.general_settings['adjust_initial_groundwater'])
@@ -196,7 +198,7 @@ print '\n>>> ',model_type,' Initialized <<<\n'
 if model_type == 'DFM':
 
     #- retrieving data from Delft3D FM    
-    x_coords, y_coords, z_coords, bottom_lvl, cell_points_fm, separator_1D, cellAreaSpherical_1way, cellAreaSpherical_2way, xz_coords, yz_coords, modelCoords, modelCoords_2way,\
+    x_coords, y_coords, z_coords, bottom_lvl, cell_points_fm, separator_1D, cellAreaSpherical_1D, cellAreaSpherical_2D, xz_coords, yz_coords, hydrodynamic_coords_1D, hydrodynamic_coords_2D,\
                 cellarea_data_pcr, landmask_data_pcr, clone_data_pcr = model_functions.extractModelData_FM(hydrodynamics, hydrology, landmask_pcr, clone_pcr, use_RFS, use_2way)
     coupledFPindices = 0.
     print '\n>>> DFM data retrieved <<<\n'
@@ -205,14 +207,14 @@ elif model_type == 'LFP':
     
     #- retrieving data from LISFLOOD-FP
     dx, dy, DEM, bottom_lvl, H, waterDepth, rows, cols, \
-                list_x_coords, list_x_coords_2way, list_y_coords, list_y_coords_2way, coupledFPindices, coupledFPindices_2way, grid_dA, cellAreaSpherical_1way, SGCQin, separator_1D,\
+                list_x_coords, list_x_coords_2way, list_y_coords, list_y_coords_2way, coupledFPindices, coupledFPindices_2way, grid_dA, cellAreaSpherical_1D, SGCQin, separator_1D,\
                 cellarea_data_pcr, landmask_data_pcr, clone_data_pcr = model_functions.extractModelData_FP(hydrodynamics, model_dir, hydrology, landmask_pcr, clone_pcr, verbose_folder, use_RFS, use_2way, verbose)
                 
-    cellAreaSpherical_2way = np.copy(cellAreaSpherical_1way)
+    cellAreaSpherical_2D = np.copy(cellAreaSpherical_1D)
                 
     #- computing FP-coordinates    
-    modelCoords = coupling_functions.getVerticesFromMidPoints(list_x_coords, list_y_coords, dx, dy, verbose)
-    modelCoords_2way = coupling_functions.getVerticesFromMidPoints(list_x_coords_2way, list_y_coords_2way, dx, dy, verbose)
+    hydrodynamic_coords_1D = coupling_functions.getVerticesFromMidPoints(list_x_coords, list_y_coords, dx, dy, verbose)
+    hydrodynamic_coords_2D = coupling_functions.getVerticesFromMidPoints(list_x_coords_2way, list_y_coords_2way, dx, dy, verbose)
     print '\n>>> LFP data retrieved <<<\n'
 
 #- computing PCR-coordinates
@@ -226,124 +228,143 @@ print '\n>>> PCR data retrieved <<<\n'
 # this is only required for plotting later, not for actual coupling process
 # remove once code works! not needed for actual applicability
 
-CoupledCellsInfoAll = coupling_functions.coupleAllCells(modelCoords,PCRcoords)
-CoupledCellsInfoAll_2way = coupling_functions.coupleAllCells(modelCoords_2way,PCRcoords)
+CoupledCellsInfoAll = coupling_functions.coupleAllCells(hydrodynamic_coords_1D,PCRcoords)
+CoupledCellsInfoAll_2way = coupling_functions.coupleAllCells(hydrodynamic_coords_2D,PCRcoords)
 
 # converting single indices of coupled PCR cells to double (array,column) indices
 
 if use_2way == False:
-    CoupleModel2PCR, CouplePCR2model, CoupledPCRcellIndices = coupling_functions.assignPCR2cells(landmask_pcr, modelCoords, verbose)
+	# coupled_hydrodynamics_2_hydrology: list containing indices of all coupled hydrodynamic cells with their corresponding index of coupled hydrologic cell (one-to-one)
+	# coupled_hydrology_2_hydrodynamics: list containing indices of all coupled hydrologic cells with their corresponding indices of coupled hydrodynamic cells (one-to-many_
+	# coupled_hydrology_indices: list containing indices of all coupled PCR cells
+	# linking PCR-cells and 1d-channels (DFM) or river cells (LFP)
+    couple_hydrodynamics_2_hydrology, couple_hydrology_2_hydrodynamics, coupled_hydrology_indices = coupling_functions.assignPCR2cells(landmask_pcr, hydrodynamic_coords_1D, verbose)
     
 elif use_2way == True:
-    CoupleModel2PCR, CouplePCR2model, CoupledPCRcellIndices = coupling_functions.assignPCR2cells(landmask_pcr, modelCoords, verbose)
-    CoupleModel2PCR_2way, CouplePCR2model_2way, CoupledPCRcellIndices_2way = coupling_functions.assignPCR2cells(landmask_pcr, modelCoords_2way, verbose)
+	# idem
+	# all variables "*_2way" are obtained by linking PCR-cells with 2d-cells (DFM) or all cells not defined as river cells (LFP)
+    couple_hydrodynamics_2_hydrology, couple_hydrology_2_hydrodynamics, coupled_hydrology_indices = coupling_functions.assignPCR2cells(landmask_pcr, hydrodynamic_coords_1D, verbose)
+    couple_hydrodynamics_2_hydrology_2way, couple_hydrology_2_hydrodynamics_2way, coupled_hydrology_indices_2way = coupling_functions.assignPCR2cells(landmask_pcr, hydrodynamic_coords_2D, verbose)
 
 # saving plots of coupled cells to verbose-folder
 # currently doesn't work with FM and use_RFS on, due to data structure required (? check this ?)
 # remove once code works! not needed for actual applicability
 
-if (model_type == 'DFM') and (use_RFS == True):
+if (model_type == 'DFM') and (use_RFS == True)
     pass
     
 else:
 	if (verbose == True) and (use_2way == False):
-		coupling_functions.plotGridfromCoords(PCRcoords, modelCoords)
+		coupling_functions.plotGridfromCoords(PCRcoords, hydrodynamic_coords_1D)
 		plt.savefig(os.path.join(verbose_folder , 'AllCells_1way.png'))
 		coupling_functions.plotGridfromCoords(CoupledCellsInfoAll[1],CoupledCellsInfoAll[0])
 		plt.savefig(os.path.join(verbose_folder , 'CoupledCells_1way.png'))   
 		plt.close('all')
 	elif (verbose == True) and (use_2way == True):
-		coupling_functions.plotGridfromCoords(PCRcoords, modelCoords)
+		coupling_functions.plotGridfromCoords(PCRcoords, hydrodynamic_coords_1D)
 		plt.savefig(os.path.join(verbose_folder , 'AllCells_1way.png'))
 		coupling_functions.plotGridfromCoords(CoupledCellsInfoAll[1],CoupledCellsInfoAll[0])
 		plt.savefig(os.path.join(verbose_folder , 'CoupledCells_1way.png'))   
 		plt.close('all')    
-		coupling_functions.plotGridfromCoords(PCRcoords, modelCoords_2way)
+		coupling_functions.plotGridfromCoords(PCRcoords, hydrodynamic_coords_2D)
 		plt.savefig(os.path.join(verbose_folder , 'AllCells_2way.png'))
 		coupling_functions.plotGridfromCoords(CoupledCellsInfoAll_2way[1],CoupledCellsInfoAll_2way[0])
 		plt.savefig(os.path.join(verbose_folder , 'CoupledCells_2way.png'))   
 		plt.close('all')
     
 # -------------------------------------------------------------------------------------------------
-# TURNING OFF CHANNELSTORAGE, WATERBODYSTORAGE, WATERBODIES AND RUNOFF TO CHANNELS
+# TURNING OFF CHANNELSTORAGE AND WATERBODYSTORAGE
+# 
+# for PCR <-> 1D 
+# this is required to avoid the entire water volume in channels and waterbodies to empty at once into DFM/LFP
+# besides, coupling is activated for relevant sections (has to be de-activated initially, otherwise spin-up does not work)
 # ------------------------------------------------------------------------------------------------- 
 
-model_functions.noStorage(hydrology, missing_value_pcr, CoupledPCRcellIndices, CouplePCR2model)
+model_functions.noStorage(hydrology, missing_value_pcr, coupled_hydrology_indices, couple_hydrology_2_hydrodynamics)
 
 # -------------------------------------------------------------------------------------------------
 # TURNING OFF ROUTING BY PCR IN COUPLED AREA
+# 
+# for PCR <-> 1D 
+# this is required to avoid double-routing by DFM/LFP and PCR (as we want to perform the routing by hydrodynamics only!)
 # -------------------------------------------------------------------------------------------------
 
-model_functions.noLDD(hydrology, CoupledPCRcellIndices, verbose_folder, verbose)
+model_functions.noLDD(hydrology, coupled_hydrology_indices, verbose_folder, verbose)
 
 # -------------------------------------------------------------------------------------------------
 # ACTIVATING A RANGE OF VARIABLES SPECIFICALLY REQUIRED FOR 2WAY-COUPLING
+#
+# for PCR <-> 2D
+# optional
+# keep it turned off until remaining coupling scheme works!
 # -------------------------------------------------------------------------------------------------
 
-#applying the function here leads to tremendous increase of water volume coupled from PCR to DFM
-#model_functions.activate2wayVariables(hydrology, CoupledPCRcellIndices)
+model_functions.adjust_iniGR(hydrology, adjust_initial_groundwater_file, coupled_hydrology_indices_2way, adjust_initial_groundwater=False) # optional
 
-model_functions.adjust_iniGR(hydrology, adjust_initial_groundwater_file, CoupledPCRcellIndices_2way, adjust_initial_groundwater=False) # optional, if adjust_initial_groundwater is set to True
-
-model_functions.activate_floodplain_infiltration_factor(hydrology, CoupledPCRcellIndices_2way, use_floodplain_infiltration_factor=False) # optional, if use_floodplain_infiltration_factor is set to True
+model_functions.activate_floodplain_infiltration_factor(hydrology, coupled_hydrology_indices_2way, use_floodplain_infiltration_factor=False) # optional
 
 # -------------------------------------------------------------------------------------------------
 # CALCULATE DELTA VOLUMES (DAY 1)
+#
 # first day outside loop, to make sure PCR time is at start time (timestep 1) and not at end of spin-up (timestep 365)
 # ------------------------------------------------------------------------------------------------- 
 
-# using a dummy here to avoid feeding back volumes to PCR before 1st update actually took place
+# using a dummy here (creates 0's for all entries in array) to avoid feeding back volumes to PCR before 1st update actually took place
 water_volume_FM_2_PCR = coupling_functions.zeroMapArray(landmask_pcr, missingValuesMap=missing_value_landmask)
 
-# setting PCR's topWaterLayer to 0 for all cells coupled to hydrodynamics (1way)
-model_functions.set_zeroTopWaterlayer(hydrology, CoupledPCRcellIndices)
+# setting PCR's topWaterLayer to 0 for all PCR cells coupled to hydrodynamics (1way)
+model_functions.set_zeroTopWaterlayer(hydrology, coupled_hydrology_indices)
 
 # retrieving PCR-GLOBWB and converting it to m3/d
-delta_volume_PCR, delta_volume_PCR_coupled = model_functions.calculateDeltaVolumes(hydrology, missing_value_pcr, secPerDay, CoupledPCRcellIndices, cellarea_data_pcr, water_volume_FM_2_PCR)
+# for PCR <-> 1D
+# delta volume = volume PCR - water_volume_FM_2_PCR
+delta_volume_PCR, delta_volume_PCR_1way = model_functions.calculateDeltaVolumes(hydrology, missing_value_pcr, secPerDay, coupled_hydrology_indices, cellarea_data_pcr, water_volume_FM_2_PCR)
 
-# removing negative delta volumes where necessary
-delta_volume_PCR_positiveOnly, delta_volume_PCR_coupled_positiveOnly = model_functions.account4negativeDeltaVolumes(hydrodynamics, model_type, CoupledPCRcellIndices, CoupledPCRcellIndices_2way, CouplePCR2model_2way, delta_volume_PCR, cellAreaSpherical_2way)
-
-# dividing delta volume from PCR-GLOBWB over hydraulic cells, depending on model specifications
-delta_water_fm, verbose_volume = model_functions.calculateDeltaWater(hydrodynamics, CoupleModel2PCR, CouplePCR2model, delta_volume_PCR_coupled_positiveOnly, cellAreaSpherical_1way, fraction_timestep, model_type, use_Fluxes)
+# dividing delta volume from PCR-GLOBWB over hydraulic cells
+# for PCR <-> 1D
+# if applied to DFM/LFP as flux, then delta_volume_PCR_1way is used
+# if applied to DFM/LFP as state, then delta_volume_PCR_1way needs to be converted to delta_water_DFM_1way
+delta_water_DFM_1way, verbose_volume_DFM_1way = model_functions.calculateDeltaWater(hydrodynamics, couple_hydrodynamics_2_hydrology, couple_hydrology_2_hydrodynamics, delta_volume_PCR_1way, cellAreaSpherical_1D, fraction_timestep, model_type, use_Fluxes)
 
 # saving PCR-GLOBWB output volumes and volumes used as input to hydraulic models to verbose-folder
 if verbose == True:
 	# initial file objects
-    fo_PCR_V_tot = open(os.path.join(verbose_folder, 'delta_volume_PCR_coupled.txt'), 'w')
-    fo_verbose_volume = open(os.path.join(verbose_folder, 'verbose_volume.txt'), 'w')
+    fo_PCR_V_tot = open(os.path.join(verbose_folder, 'delta_volume_PCR_1way.txt'), 'w')
+    fo_verbose_volume_DFM_1way = open(os.path.join(verbose_folder, 'verbose_volume_DFM_1way.txt'), 'w')
     # aggregate daily totals
-    delta_volume_PCR_total_aggr = np.sum(delta_volume_PCR_coupled)
-    verbose_volume_aggr = np.sum(verbose_volume)
+    delta_volume_PCR_total_aggr = np.sum(delta_volume_PCR_1way)
+    verbose_volume_DFM_1way_aggr = np.sum(verbose_volume_DFM_1way)
     # write daily totals to file
     fo_PCR_V_tot.write(str(delta_volume_PCR_total_aggr) + os.linesep)
-    fo_verbose_volume.write(str(verbose_volume_aggr) + os.linesep)
+    fo_verbose_volume_DFM_1way.write(str(verbose_volume_DFM_1way_aggr) + os.linesep)
 
 # check to ensure that volumes are equal, i.e. no errors in water balance
-if np.round(np.sum(np.asfarray(delta_volume_PCR_coupled)),4) != np.round(np.sum(np.asfarray(verbose_volume)), 4):
-    print 'PCR volume out: ', np.sum(np.asfarray(delta_volume_PCR_coupled))
-    print 'FM volume in: ', np.sum(np.asfarray(verbose_volume))
+if np.round(np.sum(np.asfarray(delta_volume_PCR_1way)),4) != np.round(np.sum(np.asfarray(verbose_volume_DFM_1way)), 4):
+    print 'PCR volume out: ', np.sum(np.asfarray(delta_volume_PCR_1way))
+    print 'FM volume in: ', np.sum(np.asfarray(verbose_volume_DFM_1way))
     sys.exit('\nERROR: input volumes to hydrodynamics do not match PCR output volumes!\n')
 
 # reshaping data for LISFLOOD-FP from list to arrays
+# from flattened array to actual 2D-array
 if model_type == 'LFP':
-    delta_water_fm = model_functions.fillLFPgrid(hydrodynamics, coupledFPindices, delta_water_fm, DEM, verbose_folder, verbose)
+    delta_water_DFM_1way = model_functions.fillLFPgrid(hydrodynamics, coupledFPindices, delta_water_DFM_1way, DEM, verbose_folder, verbose)
   
 # -------------------------------------------------------------------------------------------------
 # FIRST UPDATE (DAY 1)
 # -------------------------------------------------------------------------------------------------
 
-# updating arrays with computed additional volumes; array used depends on model specifications
+# overwriting variables in LFP
+# separated from DFM function because LFP can only be updated on daily time step
 if (model_type == 'LFP'):
-    model_functions.updateModel(hydrodynamics, delta_water_fm, update_step, separator_1D, use_Fluxes, use_RFS, model_type, verbose)
+    model_functions.updateModel(hydrodynamics, delta_water_DFM_1way, update_step, separator_1D, use_Fluxes, use_RFS, model_type, verbose)
 
 while hydrodynamics.get_current_time() < (hydrology.get_time_step() * secPerDay):
     
-    # updating FM on user-specified time step
+    # overwriting variables and updating DFM on user-specified time step
     if (model_type == 'DFM'):
-        model_functions.updateModel(hydrodynamics, delta_water_fm, update_step, separator_1D, use_Fluxes, use_RFS, model_type, verbose)
+        model_functions.updateModel(hydrodynamics, delta_water_DFM_1way, update_step, separator_1D, use_Fluxes, use_RFS, model_type, verbose)
     
-    # updating FM or FP on daily time step
+    # updating LFP on daily time step
     if (model_type == 'LFP'):
         hydrodynamics.update()
 
@@ -354,10 +375,10 @@ while hydrodynamics.get_current_time() < (hydrology.get_time_step() * secPerDay)
 while hydrology.get_time_step() < nr_pcr_timesteps:
 	
     # COMPUTING INUNDATION AREA AND AS FRACTION OF PCR-CELL
-    inundated_area_FM_2_PCR_coupled, inundated_fraction_FM_2_PCR =  model_functions.determine_InundationArea_Hydrodynamics(model_type, hydrodynamics, CouplePCR2model_2way, CoupledPCRcellIndices_2way, threshold_inundated_depth, cellAreaSpherical_2way, cellarea_data_pcr, landmask_pcr, missing_value_landmask)
+    inundated_area_FM_2_PCR_coupled, inundated_fraction_FM_2_PCR =  model_functions.determine_InundationArea_Hydrodynamics(model_type, hydrodynamics, couple_hydrology_2_hydrodynamics_2way, coupled_hydrology_indices_2way, threshold_inundated_depth, cellAreaSpherical_2D, cellarea_data_pcr, landmask_pcr, missing_value_landmask)
 
     # COMPUTING WATER DEPTH AND VOLUME TO BE COUPLED BACK TO PCR
-    water_depths_FM_2_PCR, water_volume_FM_2_PCR = model_functions.determine_InundationDepth_Hydrodynamics(model_type, hydrodynamics, landmask_pcr, missing_value_landmask, inundated_area_FM_2_PCR_coupled, CouplePCR2model_2way, CoupledPCRcellIndices_2way, cellAreaSpherical_1way)
+    water_depths_FM_2_PCR, water_volume_FM_2_PCR = model_functions.determine_InundationDepth_Hydrodynamics(model_type, hydrodynamics, landmask_pcr, missing_value_landmask, inundated_area_FM_2_PCR_coupled, couple_hydrology_2_hydrodynamics_2way, coupled_hydrology_indices_2way, cellAreaSpherical_1D)
 
     # DETERMINING NEW STORAGE IN PCR-CHANNELS
     new_storage_pcr = model_functions.determine_new_channelStoragePCR(hydrology, landmask_pcr, missing_value_landmask, water_volume_FM_2_PCR)
@@ -366,39 +387,39 @@ while hydrology.get_time_step() < nr_pcr_timesteps:
     model_functions.updateHydrologicVariables(hydrology, water_depths_FM_2_PCR, inundated_fraction_FM_2_PCR, new_storage_pcr)
     
     # retrieving PCR-GLOBWB and converting it to m3/d
-    delta_volume_PCR, delta_volume_PCR_coupled = model_functions.calculateDeltaVolumes(hydrology, missing_value_pcr, secPerDay, CoupledPCRcellIndices, cellarea_data_pcr, water_volume_FM_2_PCR) 
+    delta_volume_PCR, delta_volume_PCR_1way = model_functions.calculateDeltaVolumes(hydrology, missing_value_pcr, secPerDay, coupled_hydrology_indices, cellarea_data_pcr, water_volume_FM_2_PCR) 
 	
     # removing negative delta volumes where necessary
-    delta_volume_PCR_positiveOnly, delta_volume_PCR_coupled_positiveOnly = model_functions.account4negativeDeltaVolumes(hydrodynamics, model_type, CoupledPCRcellIndices, CoupledPCRcellIndices_2way, CouplePCR2model_2way, delta_volume_PCR, cellAreaSpherical_2way)
+    delta_volume_PCR_positiveOnly, delta_volume_PCR_1way_positiveOnly = model_functions.account4negativeDeltaVolumes(hydrodynamics, model_type, coupled_hydrology_indices, coupled_hydrology_indices_2way, couple_hydrology_2_hydrodynamics_2way, delta_volume_PCR, cellAreaSpherical_2D)
 				                 
     # dividing delta volume from PCR-GLOBWB over hydraulic cells, depending on model specifications
-    delta_water_fm, verbose_volume = model_functions.calculateDeltaWater(hydrodynamics, CoupleModel2PCR, CouplePCR2model, delta_volume_PCR_coupled_positiveOnly, cellAreaSpherical_1way, fraction_timestep, model_type, use_Fluxes)
+    delta_water_DFM_1way, verbose_volume_DFM_1way = model_functions.calculateDeltaWater(hydrodynamics, couple_hydrodynamics_2_hydrology, couple_hydrology_2_hydrodynamics, delta_volume_PCR_1way_positiveOnly, cellAreaSpherical_1D, fraction_timestep, model_type, use_Fluxes)
     
     pdb.set_trace()
     
     # saving PCR-GLOBWB output volumes and volumes used as input to hydraulic models to verbose-folder
     if verbose == True:
         # aggregate daily totals
-        delta_volume_PCR_total_aggr = np.sum(delta_volume_PCR_coupled)
-        verbose_volume_aggr = np.sum(verbose_volume)
+        delta_volume_PCR_total_aggr = np.sum(delta_volume_PCR_1way)
+        verbose_volume_DFM_1way_aggr = np.sum(verbose_volume_DFM_1way)
         # write daily totals to file
         fo_PCR_V_tot.write(str(delta_volume_PCR_total_aggr) + os.linesep)
-        fo_verbose_volume.write(str(verbose_volume_aggr) + os.linesep)
+        fo_verbose_volume_DFM_1way.write(str(verbose_volume_DFM_1way_aggr) + os.linesep)
     
     # reshaping data for LISFLOOD-FP from list to arrays
     if model_type == 'LFP':
-        delta_water_fm = model_functions.fillLFPgrid(hydrodynamics, coupledFPindices, delta_water_fm, DEM, verbose_folder, verbose)  
+        delta_water_DFM_1way = model_functions.fillLFPgrid(hydrodynamics, coupledFPindices, delta_water_DFM_1way, DEM, verbose_folder, verbose)  
     
     # updating arrays with computed additional volumes; array used depends on model specifications
     if (model_type == 'LFP'):
-        model_functions.updateModel(hydrodynamics, delta_water_fm, update_step, separator_1D, use_Fluxes, use_RFS, model_type, verbose)      
+        model_functions.updateModel(hydrodynamics, delta_water_DFM_1way, update_step, separator_1D, use_Fluxes, use_RFS, model_type, verbose)      
 
     # update FM unless it has has reached the same time as PCR
     while hydrodynamics.get_current_time() < (hydrology.get_time_step() * secPerDay):
         
         # updating FM on user-specified time step
         if (model_type == 'DFM'):
-            model_functions.updateModel(hydrodynamics, delta_water_fm, update_step, separator_1D, use_Fluxes, use_RFS, model_type, verbose)      
+            model_functions.updateModel(hydrodynamics, delta_water_DFM_1way, update_step, separator_1D, use_Fluxes, use_RFS, model_type, verbose)      
         
         # updating FM or FP on daily time step
         if (model_type == 'LFP'):
@@ -413,7 +434,7 @@ model_functions.write2log(model_dir, model_file, latlon, use_2way, use_Fluxes, u
 # close files
 if verbose == True:
     fo_PCR_V_tot.close()
-    fo_verbose_volume.close()
+    fo_verbose_volume_DFM_1way.close()
 
 #- finalizing hydrodynamic model to properly end execution
 hydrodynamics.finalize()
