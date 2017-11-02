@@ -1,0 +1,11 @@
+Metadata-Version: 1.0
+Name: pcrglobwb-203-30min-2way
+Version: 1.0dev-r0
+Summary: PCR-GLOBWB, version 2.0.3, optimized for data with 30min resolution, extended with BMI, adapted for 2-way coupling to D-Flow FM and LISFLOOD-FP, converted to a library
+Home-page: UNKNOWN
+Author: Jannis Hoch
+Author-email: j.m.hoch@uu.nl
+License: UNKNOWN
+Description: UNKNOWN
+Keywords: hydro
+Platform: UNKNOWN
