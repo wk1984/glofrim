@@ -250,7 +250,7 @@ elif use_2way == True:
 # currently doesn't work with FM and use_RFS on, due to data structure required (? check this ?)
 # remove once code works! not needed for actual applicability
 
-if (model_type == 'DFM') and (use_RFS == True)
+if (model_type == 'DFM') and (use_RFS == True):
     pass
     
 else:
@@ -376,25 +376,38 @@ while hydrologicModel.get_time_step() < nr_model_timesteps:
 	
     # COMPUTING INUNDATION AS AREA AND AS FRACTION OF PCR-CELL
     # for PCR <-> 2D
-    inundated_area_FM_2_PCR_coupled, inundated_fraction_FM_2_PCR = model_functions.determine_InundationArea_hydrodynamicModel(model_type, 
-                                                                                                                              hydrodynamicModel, 
-                                                                                                                              couple_hydrologicModel_2_hydrodynamicModel_2way, 
-                                                                                                                              coupled_hydrologicModel_indices_2way, 
-                                                                                                                              threshold_inundated_depth, 
-                                                                                                                              cellAreaSpherical_2D, 
-                                                                                                                              cellarea_data_pcr, 
-                                                                                                                              landmask_pcr, 
-                                                                                                                              missing_value_landmask)
+    # returned both as list for coupled PCR cells only ('*_coupled') and as 2d-arrays to be set back into PCR via BMI
+    inundated_area_FM_2_PCR_coupled, inundated_area_FM_2_PCR, inundated_fraction_FM_2_PCR_coupled, inundated_fraction_FM_2_PCR = model_functions.determine_InundationArea_Hydrodynamics(model_type, 
+                                                                                                                                                                                        hydrodynamicModel, 
+																																														couple_hydrologicModel_2_hydrodynamicModel_2way, 
+																																														coupled_hydrologicModel_indices_2way, 
+																																														threshold_inundated_depth, 
+																																														cellAreaSpherical_2D, 
+																																														cellarea_data_pcr, 
+																																														landmask_pcr, 
+																																														missing_value_landmask)
+    
+    # testing output, but only for one time step
+    if verbose == hydrologicModel.get_time_step() == 2.:
+		plt.figure()
+		plt.imshow(inundated_area_FM_2_PCR)
+		plt.savefig(os.path.join(verbose_folder , 'inundated_area_FM_2_PCR_atTimestep_' + str(hydrologicModel.get_time_step) + '.png'))
+		plt.figure()
+		plt.imshow(inundated_fraction_FM_2_PCR)
+		plt.savefig(os.path.join(verbose_folder , 'inundated_fraction_FM_2_PCR_atTimestep_' + str(hydrologicModel.get_time_step) + '.png'))
+		plt.close('all')
+    
 
-    # COMPUTING WATER DEPTH AND VOLUME TO BE COUPLED BACK TO PCR
-    water_depths_FM_2_PCR, water_volume_FM_2_PCR = model_functions.determine_InundationDepth_hydrodynamicModel(model_type, 
-                                                                                                               hydrodynamicModel, 
-                                                                                                               landmask_pcr, 
-                                                                                                               missing_value_landmask, 
-                                                                                                               inundated_area_FM_2_PCR_coupled, 
-                                                                                                               couple_hydrologicModel_2_hydrodynamicModel_2way, 
-                                                                                                               coupled_hydrologicModel_indices_2way, 
-                                                                                                               cellAreaSpherical_1D)
+    # COMPUTING WATER VOLUME AND DEPTH TO BE COUPLED BACK TO PCR
+    # for PCR <-> 2D
+    # returned only 2d-arrays to be set back into PCR via BMI
+    water_volume_FM_2_PCR, water_depths_FM_2_PCR  = model_functions.determine_InundationDepth_Hydrodynamics(model_type, 
+																											hydrodynamicModel, 
+																											landmask_pcr, 
+																											missing_value_landmask, 
+																											inundated_area_FM_2_PCR_coupled, 
+																											couple_hydrologicModel_2_hydrodynamicModel_2way, 
+																											coupled_hydrologicModel_indices_2way)
 
     # DETERMINING NEW STORAGE IN PCR-CHANNELS
     new_storage_pcr = model_functions.determine_new_channelStoragePCR(hydrologicModel, 
