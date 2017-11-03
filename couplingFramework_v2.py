@@ -375,20 +375,24 @@ while hydrodynamicModel.get_current_time() < (hydrologicModel.get_time_step() * 
 while hydrologicModel.get_time_step() < nr_model_timesteps:
 	
     # COMPUTING INUNDATION AS AREA AND AS FRACTION OF PCR-CELL
+    # for PCR <-> 1D
     # for PCR <-> 2D
     # returned both as list for coupled PCR cells only ('*_coupled') and as 2d-arrays to be set back into PCR via BMI
-    inundated_area_FM_2_PCR_coupled, inundated_area_FM_2_PCR, inundated_fraction_FM_2_PCR_coupled, inundated_fraction_FM_2_PCR = model_functions.determine_InundationArea_Hydrodynamics(model_type, 
+    inundated_area_FM_2_PCR_coupled_1D, inundated_area_FM_2_PCR_coupled, inundated_area_FM_2_PCR, inundated_fraction_FM_2_PCR_coupled, inundated_fraction_FM_2_PCR = model_functions.determine_InundationArea_Hydrodynamics(model_type, 
                                                                                                                                                                                         hydrodynamicModel, 
+                                                                                                                                                                                        couple_hydrologicModel_2_hydrodynamicModel,
+                                                                                                                                                                                        coupled_hydrologicModel_indices,
 																																														couple_hydrologicModel_2_hydrodynamicModel_2way, 
 																																														coupled_hydrologicModel_indices_2way, 
 																																														threshold_inundated_depth, 
+																																														cellAreaSpherical_1D,
 																																														cellAreaSpherical_2D, 
 																																														cellarea_data_pcr, 
 																																														landmask_pcr, 
 																																														missing_value_landmask)
     
     # testing output, but only for one time step
-    if verbose == hydrologicModel.get_time_step() == 2.:
+    if hydrologicModel.get_time_step() == 2.:
 		plt.figure()
 		plt.imshow(inundated_area_FM_2_PCR)
 		plt.savefig(os.path.join(verbose_folder , 'inundated_area_FM_2_PCR_atTimestep_' + str(hydrologicModel.get_time_step) + '.png'))
@@ -399,21 +403,26 @@ while hydrologicModel.get_time_step() < nr_model_timesteps:
     
 
     # COMPUTING WATER VOLUME AND DEPTH TO BE COUPLED BACK TO PCR
+    # for PCR <-> 1D
     # for PCR <-> 2D
     # returned only 2d-arrays to be set back into PCR via BMI
-    water_volume_FM_2_PCR, water_depths_FM_2_PCR  = model_functions.determine_InundationDepth_Hydrodynamics(model_type, 
+    water_volume_FM_2_PCR_1D, water_depths_FM_2_PCR_1D, water_volume_FM_2_PCR, water_depths_FM_2_PCR  = model_functions.determine_InundationDepth_Hydrodynamics(model_type, 
 																											hydrodynamicModel, 
 																											landmask_pcr, 
-																											missing_value_landmask, 
-																											inundated_area_FM_2_PCR_coupled, 
+																											missing_value_landmask,
+																											inundated_area_FM_2_PCR_coupled_1D, 
+																											inundated_area_FM_2_PCR_coupled,
+																											couple_hydrologicModel_2_hydrodynamicModel,
+																											coupled_hydrologicModel_indices, 
 																											couple_hydrologicModel_2_hydrodynamicModel_2way, 
 																											coupled_hydrologicModel_indices_2way)
 
     # DETERMINING NEW STORAGE IN PCR-CHANNELS
+    # for PCR <-> 1D
     new_storage_pcr = model_functions.determine_new_channelStoragePCR(hydrologicModel, 
                                                                       landmask_pcr, 
                                                                       missing_value_landmask, 
-                                                                      water_volume_FM_2_PCR)
+                                                                      water_volume_FM_2_PCR_1D)
     
     # UPDATE VARIABLES IN PCR
     model_functions.updateHydrologicVariables(hydrologicModel, 

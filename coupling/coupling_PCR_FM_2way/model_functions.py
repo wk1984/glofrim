@@ -311,7 +311,7 @@ def activate2wayVariables(model_pcr, CoupledPCRcellIndices):
     
 # =============================================================================
 
-def determine_InundationArea_Hydrodynamics(model_type, model_hydr, CouplePCR2model_2way, CoupledPCRcellIndices_2way, threshold_inundated_depth, cellAreaSpherical_2way, cellarea_data_pcr, landmask_pcr, missing_value_landmask):
+def determine_InundationArea_Hydrodynamics(model_type, model_hydr, CouplePCR2model_1way, CoupledPCRcellIndices_1way, CouplePCR2model_2way, CoupledPCRcellIndices_2way, threshold_inundated_depth, cellAreaSpherical_1way, cellAreaSpherical_2way, cellarea_data_pcr, landmask_pcr, missing_value_landmask):
 	"""
 	get total area of all flooded FM cells coupled to current PCR cell
 	
@@ -345,21 +345,41 @@ def determine_InundationArea_Hydrodynamics(model_type, model_hydr, CouplePCR2mod
 	# initiate arrays, both for entire PCR extent to be used with BMI and for coupled PCR cells stored in list only
 	inundated_area_FM_2_PCR             = coupling_functions.zeroMapArray(landmask_pcr, missingValuesMap=missing_value_landmask)
 	inundated_area_FM_2_PCR_coupled     = np.zeros(len(CouplePCR2model_2way))
+	inundated_area_FM_2_PCR_coupled_1D  = np.zeros(len(CouplePCR2model_1way))
 	inundated_fraction_FM_2_PCR         = coupling_functions.zeroMapArray(landmask_pcr, missingValuesMap=missing_value_landmask)
 	inundated_fraction_FM_2_PCR_coupled = np.zeros(len(CouplePCR2model_2way))
+	
+	# loop over all PCR cells coupled to a 2D hydrodynamic cell
+	for i in range(len(CouplePCR2model_1way)):
+		
+		# get total area of all flooded hydrodynamic cells coupled to current PCR cell
+		# temporary variable for storing total area of flooded FM cells coupled to current PCR cell
+		temp_inundated_area_hydrodynamics = 0.
+		
+		# loop over all 1D hydrodynamic cells within PCR cell i
+		for j in range(len(CouplePCR2model_1way[i][1])):
+			
+			# get current FM cell index
+			current_hydrodynamic_cell_index = CouplePCR2model_1way[i][1][j]
+				
+			# if so, add cell area to temporary variable containing aggregated inundated area per PCR cell in m2
+			temp_inundated_area_hydrodynamics += cellAreaSpherical_1way[current_hydrodynamic_cell_index]
+				
+		# at end of loop, assign temporary variable to array storing inundated areas per PCR cell
+		inundated_area_FM_2_PCR_coupled_1D[i] = temp_inundated_area_hydrodynamics
 		
 	# loop over all PCR cells coupled to a 2D hydrodynamic cell
-	for i in range(len(CouplePCR2model_2way)):
+	for k in range(len(CouplePCR2model_2way)):
 		
 		# get total area of all flooded hydrodynamic cells coupled to current PCR cell
 		# temporary variable for storing total area of flooded FM cells coupled to current PCR cell
 		temp_inundated_area_hydrodynamics = 0.
 		
 		# loop over all 2D hydrodynamic cells within PCR cell i
-		for j in range(len(CouplePCR2model_2way[i][1])):
+		for l in range(len(CouplePCR2model_2way[k][1])):
 			
 			# get current FM cell index
-			current_hydrodynamic_cell_index = CouplePCR2model_2way[i][1][j]
+			current_hydrodynamic_cell_index = CouplePCR2model_2way[k][1][l]
 			
 			# check if water depth of current hydrodynamic cell exceeds threshold
 			if current_water_depth[current_hydrodynamic_cell_index] >= threshold_inundated_depth:
@@ -367,27 +387,23 @@ def determine_InundationArea_Hydrodynamics(model_type, model_hydr, CouplePCR2mod
 				# if so, add cell area to temporary variable containing aggregated inundated area per PCR cell in m2
 				temp_inundated_area_hydrodynamics += cellAreaSpherical_2way[current_hydrodynamic_cell_index]
 				
-# 			IDEA TO MASK OUT ALL HYDRODYNAMIC CELLS THAT ARE BELOW THE THRESHOLD
-#			elif current_water_depth[current_hydrodynamic_cell_index] < threshold_inundated_depth:
-#				current_water_depth[current_hydrodynamic_cell_index] = 0.
-				
 		# at end of loop, assign temporary variable to array storing inundated areas per PCR cell
-		inundated_area_FM_2_PCR_coupled[i] = temp_inundated_area_hydrodynamics
+		inundated_area_FM_2_PCR_coupled[k] = temp_inundated_area_hydrodynamics
 		
 		# assign value of current cell to zero array to be used with BMI
-		inundated_area_FM_2_PCR[CoupledPCRcellIndices_2way[i]] = inundated_area_FM_2_PCR_coupled[i]
+		inundated_area_FM_2_PCR[CoupledPCRcellIndices_2way[k]] = inundated_area_FM_2_PCR_coupled[k]
 		
 		# divide total inuncated area of all hydrodynamics cells by corresponding PCR cell area to obtain flooded area fraction
-		inundated_fraction_FM_2_PCR_coupled[i] = inundated_area_FM_2_PCR_coupled[i] / cellarea_data_pcr[CoupledPCRcellIndices_2way[i]]     
+		inundated_fraction_FM_2_PCR_coupled[k] = inundated_area_FM_2_PCR_coupled[k] / cellarea_data_pcr[CoupledPCRcellIndices_2way[k]]     
 		                                                   
 		# assign value of current cell to zero array to be used with BMI
-		inundated_fraction_FM_2_PCR[CoupledPCRcellIndices_2way[i]] = inundated_fraction_FM_2_PCR_coupled[i]
+		inundated_fraction_FM_2_PCR[CoupledPCRcellIndices_2way[k]] = inundated_fraction_FM_2_PCR_coupled[k]
 	
-	return inundated_area_FM_2_PCR_coupled, inundated_area_FM_2_PCR, inundated_fraction_FM_2_PCR_coupled, inundated_fraction_FM_2_PCR
+	return inundated_area_FM_2_PCR_coupled_1D, inundated_area_FM_2_PCR_coupled, inundated_area_FM_2_PCR, inundated_fraction_FM_2_PCR_coupled, inundated_fraction_FM_2_PCR
 
 # =============================================================================
 
-def determine_InundationDepth_Hydrodynamics(model_type, model_hydr, landmask_pcr, missing_value_landmask, inundated_area_FM_2_PCR_coupled, CouplePCR2model_2way, CoupledPCRcellIndices_2way):
+def determine_InundationDepth_Hydrodynamics(model_type, model_hydr, landmask_pcr, missing_value_landmask, inundated_area_FM_2_PCR_coupled_1D, inundated_area_FM_2_PCR_coupled, CouplePCR2model_1way, CoupledPCRcellIndices_1way, CouplePCR2model_2way, CoupledPCRcellIndices_2way):
     """
     based on before calculated inundation area and retrieved inundation volume, the actual inundation depth per 2D hydrodynamic grid cell is calculated
     
@@ -397,17 +413,22 @@ def determine_InundationDepth_Hydrodynamics(model_type, model_hydr, landmask_pcr
     model_hydr:                 		BMI-adapter of hydrodynamic model
     landmask_pcr:						PCR landmask properties
 	missing_value_landmask:				value which is typically used in PCR landmask (mostly -255)
+	inundated_area_FM_2_PCR_coupled_1D:	inundation area per PCR cell coupled to a 1D hydrodynamic cell (see function determine_inundationArea_Hydrodynamics)
 	inundated_area_FM_2_PCR_coupled:	inundation area per PCR cell coupled to a 2D hydrodynamic cell (see function determine_inundationArea_Hydrodynamics)
-	CouplePCR2model_2way:       		list of PCR cell indices with corresponding coupled 2D hydrodynamic cell indices
+	CouplePCR2model_1way:       		list of PCR cell indices with corresponding coupled 1D hydrodynamic cell indices (channels)
+	CoupledPCRcellIndices_1way: 		i,j indices of all PCR cells coupled to a 1D hydrodynamic cell
+	CouplePCR2model_2way:       		list of PCR cell indices with corresponding coupled 2D hydrodynamic cell indices (floodplains)
 	CoupledPCRcellIndices_2way: 		i,j indices of all PCR cells coupled to a 2D hydrodynamic cell
     
     Output:
     -------
-    water_volume_FM_2_PCR:				2d-array containing accumulated water depth information, to be used with BMI
-    water_depths_FM_2_PCR:				2d-array containing cell averaged water depth information, to be used with BMI
+    water_volume_FM_2_PCR_1D:			2d-array containing accumulated water volume information for all PCR cells coupled to channels, to be used with BMI
+    water_depths_FM_2_PCR_1D:			2d-array containing cell averaged water depth information for all PCR cells coupled to channels, to be used with BMI
+    water_volume_FM_2_PCR:				2d-array containing accumulated water volume information for all PCR cells coupled to floodplains, to be used with BMI
+    water_depths_FM_2_PCR:				2d-array containing cell averaged water depth information for all PCR cells coupled to floodplains, to be used with BMI
     
     """
-    # retrieve or calculate water volume of all hydrodynamic cells cells
+    # retrieve or calculate water volume of all hydrodynamic cells cells (i.e. both 1D and 2D)
     if model_type == 'DFM':
         current_volume_fm = np.copy(model_hydr.get_var('vol1'))
     elif model_type == 'LFP':
@@ -415,33 +436,60 @@ def determine_InundationDepth_Hydrodynamics(model_type, model_hydr, landmask_pcr
 		current_volume_fm = current_volume_fm.ravel()
     
     # initializing arrays for filling in total volumes and water depths for each coupled PCR cell
+    # for those coupled to channels
+    water_volume_FM_2_PCR_coupled_1D = np.zeros(len(CouplePCR2model_1way))
+    water_depths_FM_2_PCR_coupled_1D = np.zeros(len(CouplePCR2model_1way))
+    # for those coupled to floodplains
     water_volume_FM_2_PCR_coupled = np.zeros(len(CouplePCR2model_2way))
     water_depths_FM_2_PCR_coupled = np.zeros(len(CouplePCR2model_2way))
 	
     # create zero array of appropriate size for using BMI function 'set_var'
+    # for those coupled back from channels
+    water_depths_FM_2_PCR_1D = coupling_functions.zeroMapArray(landmask_pcr, missingValuesMap=missing_value_landmask)
+    water_volume_FM_2_PCR_1D = coupling_functions.zeroMapArray(landmask_pcr, missingValuesMap=missing_value_landmask)
+    # for those coupled back from floodplains
     water_depths_FM_2_PCR = coupling_functions.zeroMapArray(landmask_pcr, missingValuesMap=missing_value_landmask)
     water_volume_FM_2_PCR = coupling_functions.zeroMapArray(landmask_pcr, missingValuesMap=missing_value_landmask)
     
-    # loop over all coupled PCR cells and fill in and/or calculate values
-    for i in range(len(CouplePCR2model_2way)):
+    # loop over all PCR cells coupled to hydrodynamic channels and fill in and/or calculate values
+    for i in range(len(CouplePCR2model_1way)):
 		
 		# aggregate water volume of all hydrodynamic cells within corresponding PCR cell
-		water_volume_FM_2_PCR_coupled[i] = np.sum(current_volume_fm[CouplePCR2model_2way[i][1]])
+		water_volume_FM_2_PCR_coupled_1D[i] = np.sum(current_volume_fm[CouplePCR2model_1way[i][1]])
 		
 		# assign aggregated water volume to array to be later used with BMI
-		water_volume_FM_2_PCR[CoupledPCRcellIndices_2way[i]] = water_volume_FM_2_PCR_coupled[i]
+		water_volume_FM_2_PCR_1D[CoupledPCRcellIndices_1way[i]] = water_volume_FM_2_PCR_coupled_1D[i]
 		
         # divide aggregated water volume per coupled PCR cell by aggregated DFM/LFP inundation area per coupled PCR cell to compute water depth per coupled PCR cell
-		if inundated_area_FM_2_PCR_coupled[i] > 0. :
-			water_depths_FM_2_PCR_coupled[i] = water_volume_FM_2_PCR_coupled[i] / inundated_area_FM_2_PCR_coupled[i]
+		if inundated_area_FM_2_PCR_coupled_1D[i] > 0. :
+			water_depths_FM_2_PCR_coupled_1D[i] = water_volume_FM_2_PCR_coupled_1D[i] / inundated_area_FM_2_PCR_coupled_1D[i]
 			
 		else:
-			water_depths_FM_2_PCR_coupled[i] = 0.
+			water_depths_FM_2_PCR_coupled_1D[i] = 0.
 			
         # assign computed water depth to array to be later used with BMI
-		water_depths_FM_2_PCR[CoupledPCRcellIndices_2way[i]] = water_depths_FM_2_PCR_coupled[i]
+		water_depths_FM_2_PCR_1D[CoupledPCRcellIndices_1way[i]] = water_depths_FM_2_PCR_coupled_1D[i]
+    
+    # loop over all PCR cells coupled to hydrodynamic floodplains and fill in and/or calculate values
+    for j in range(len(CouplePCR2model_2way)):
+		
+		# aggregate water volume of all hydrodynamic cells within corresponding PCR cell
+		water_volume_FM_2_PCR_coupled[j] = np.sum(current_volume_fm[CouplePCR2model_2way[j][1]])
+		
+		# assign aggregated water volume to array to be later used with BMI
+		water_volume_FM_2_PCR[CoupledPCRcellIndices_2way[j]] = water_volume_FM_2_PCR_coupled[j]
+		
+        # divide aggregated water volume per coupled PCR cell by aggregated DFM/LFP inundation area per coupled PCR cell to compute water depth per coupled PCR cell
+		if inundated_area_FM_2_PCR_coupled[j] > 0. :
+			water_depths_FM_2_PCR_coupled[j] = water_volume_FM_2_PCR_coupled[j] / inundated_area_FM_2_PCR_coupled[j]
+			
+		else:
+			water_depths_FM_2_PCR_coupled[j] = 0.
+			
+        # assign computed water depth to array to be later used with BMI
+		water_depths_FM_2_PCR[CoupledPCRcellIndices_2way[j]] = water_depths_FM_2_PCR_coupled[j]
 
-    return water_volume_FM_2_PCR, water_depths_FM_2_PCR  
+    return water_volume_FM_2_PCR_1D, water_depths_FM_2_PCR_1D, water_volume_FM_2_PCR, water_depths_FM_2_PCR  
       
 # =============================================================================
     
@@ -847,8 +895,19 @@ def activate_floodplain_infiltration_factor(model_pcr, CoupledPCRcellIndices, us
 
 def determine_new_channelStoragePCR(model_pcr, landmask_pcr, missing_value_landmask, water_volume_FM_2_PCR):
 	"""
-	TO DO: does it make sense to use channel storage here as we add it to all types of PCR cells, not only channels?
-	would it not be an idea to use surfaceWaterStorage [m] instead?
+	couples back the aggregated water volume of each hydrodynamic channel cell to the channel storage in PCR
+	
+	Input:
+	------
+	model_pcr:				BMI-adapter of hydrologic model
+	landmask_pcr:			PCR landmask properties
+	missing_value_landmask:	value which is typically used in PCR landmask (mostly -255)
+	water_volume_FM_2_PCR:	2d-array containing accumulated water volume information for all PCR cells coupled to channels (see function 'determine_InundationDepth_Hydrodynamics')
+	
+	Output:
+	-------
+	new_channel_storage:	2d-array with updated channel storage information
+	
 	"""
 	
 	current_channelStorage_pcr  = model_pcr.get_var(('routing','channelStorage'))
@@ -858,7 +917,8 @@ def determine_new_channelStoragePCR(model_pcr, landmask_pcr, missing_value_landm
 	for i in range(len(new_channelStorage_pcr)):
 		for j in range(len(new_channelStorage_pcr[0])):
 			if current_channelStorage_pcr[i][j] != -999:
-				new_channelStorage_pcr[i][j] = current_channelStorage_pcr[i][j] + water_volume_FM_2_PCR[i][j]
+#				new_channelStorage_pcr[i][j] = current_channelStorage_pcr[i][j] + water_volume_FM_2_PCR[i][j] # OLD, as used by Arjen
+				new_channelStorage_pcr[i][j] = water_volume_FM_2_PCR[i][j]
             
 	return new_channelStorage_pcr
 	
