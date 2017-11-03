@@ -540,7 +540,7 @@ def updateHydrologicVariables(model_pcr, water_depths_floodplains_FM_2_PCR, inun
     model_pcr.set_var(('forest','inundatedFraction'), inundated_fraction_floodplains_FM_2_PCR)
     
     # add water from FM rivers back to PCR
-    print 'water volume added to channelStorage in PCR %.2E' % np.sum(new_channelStorage_pcr)
+    print '\nwater volume added to channelStorage in PCR %.2E' % np.sum(new_channelStorage_pcr)
     print ''
     model_pcr.set_var(('routing','channelStorage'), new_channelStorage_pcr)
         
@@ -583,55 +583,54 @@ def noLDD(model_pcr, CoupledPCRcellIndices, verbose_folder, verbose):
 
 def calculateDeltaVolumes(model_pcr, missing_value_pcr, secPerDay, CoupledPCRcellIndices, cellarea_data_pcr, water_volume_FM_2_PCR):
     """
-    Calculating the delta volumes [m3/d] for all coupled PCR-cells.
-    Delta volumes are based on discharge, surfaceRunoff, and topWaterLayer (only 2way-coupling) in PCR-GLOBWB.
+    Calculating the delta volumes [m3/d] for all coupled PCR-cells as well as for those coupled to hydrodynamic channels only.
+    For the feedback from DFM/LFP, the hydrodynamic model determines the amount of actual delta volume that can be added.
+    To that end, the water volume already present in DFM/LFP is subtracted from the original delta volume.
     
     Input:
-        - list with indexes pointing to coupled PCR-cells
-        - PCR landmask data
+    ------
+    model_pcr:					BMI-adapter of coupled hydrologic model
+    missing_value_pcr:			missing value of PCR maps (mostly -999)
+    secPerDay:					86400
+    CoupledPCRcellIndices:		list of PCR cells coupled to a hydrodynamic channel	
+	cellarea_data_pcr:			2d-array of spherical cell area of all PCR cells
+	water_volume_FM_2_PCR:		2d-array of water volume in hydrodynamic cells per PCR cell
         
     Output:
-        - if RFS active, two arrays with delta volumes for river and floodplain cells, respectively
-        - if RFS not active, one array with aggregated delta volumes
-        - all outputs are in m3/day
+    -------
+    delta_volume_PCR:			2d-array of delta volume [m3/day] to be used later with BMI
+    delta_volume_PCR_coupled:	list of delta volume [m3/day] for all PCR cells coupled to a hydrodynamic channel
+    
     """
-    #- update PCR for one day to get values
+    #- update PCR for one time step (=1 day)
     model_pcr.update(1)
 
     #- retrieve data from PCR-GLOBWB
     current_discharge_pcr  = model_pcr.get_var('discharge')
     current_runoff_pcr     = model_pcr.get_var('landSurfaceRunoff')
-    current_waterlayer_pcr = model_pcr.get_var('topWaterLayer')
-
-    # # TODO: remove below when everything works
-    # clone = model_pcr.get_var(('routing', 'lddMap'))
-    # len_y = clone.shape[0]
-    # len_x = clone.shape[1]
-    # current_discharge_pcr = np.random.rand(len_y, len_x)
-    # current_runoff_pcr = np.random.rand(len_y, len_x)
-    # current_waterlayer_pcr  = np.random.rand(len_y, len_x)
+#    current_waterlayer_pcr = model_pcr.get_var('topWaterLayer') # do we really need this one? isn't that internally taken care of by PCR?
     
     # Step 1: convert everything to m3/d and set missing values to zero
     water_volume_PCR_rivers = current_discharge_pcr * secPerDay
     water_volume_PCR_rivers[current_discharge_pcr==missing_value_pcr] = 0.
     water_volume_PCR_runoff = current_runoff_pcr * cellarea_data_pcr
     water_volume_PCR_runoff[current_runoff_pcr==missing_value_pcr] = 0.
-    water_volume_PCR_waterlayer = current_waterlayer_pcr * cellarea_data_pcr
-    water_volume_PCR_waterlayer[current_waterlayer_pcr==missing_value_pcr] = 0.
+#    water_volume_PCR_waterlayer = current_waterlayer_pcr * cellarea_data_pcr
+#    water_volume_PCR_waterlayer[current_waterlayer_pcr==missing_value_pcr] = 0.
     
     # Step 2: deterime total input volume from PCR-GLOBWB that should be present at this time step
-    water_volume_PCR_total_in = water_volume_PCR_rivers + water_volume_PCR_runoff + water_volume_PCR_waterlayer
-    print '\ndelta volume before adding back from FM: %.2E' % np.sum(water_volume_PCR_total_in)
+    water_volume_PCR_total_in = water_volume_PCR_rivers + water_volume_PCR_runoff #+ water_volume_PCR_waterlayer
+    print '\ndelta volume of all PCR cells before feedback from DFM: %.2E' % np.sum(water_volume_PCR_total_in)
     
     # Step 3: remove water volume already present in PCR-GLOBWB from previous time step to obtain delta volume
     delta_volume_PCR = water_volume_PCR_total_in - water_volume_FM_2_PCR
-    print 'adding back from FM ', np.sum(water_volume_FM_2_PCR)
-    print 'delta volume after adding back from FM: %.2E' % np.sum(delta_volume_PCR)
-    print 'relative reduction compared to no adding back', np.round((1-(np.sum(delta_volume_PCR) / np.sum(water_volume_PCR_total_in)))*100., 2), '%'
+    print 'feedback volume from FM: %.2E ' % np.sum(water_volume_FM_2_PCR)
+    print 'delta volume of all PCR cells after feedback from FM: %.2E' % np.sum(delta_volume_PCR)
+    print 'reduction by ', np.round((1-(np.sum(delta_volume_PCR) / np.sum(water_volume_PCR_total_in)))*100., 2), '%'
        
     # Step 4: clip to coupled PCR-GLOBWB cells only
     delta_volume_PCR_coupled = delta_volume_PCR[zip(*CoupledPCRcellIndices)]
-    print 'delta volume for 1way-coupled cells only %.2E' % np.sum(delta_volume_PCR_coupled)
+    print 'delta volume for PCR cells coupled to hydrodynamic channels only %.2E' % np.sum(delta_volume_PCR_coupled)
     
     #if np.round(np.sum(water_volume_PCR_total_in[zip(*CoupledPCRcellIndices)]) - np.sum(water_volume_FM_2_PCR[zip(*CoupledPCRcellIndices)]), decimals=-6) != np.round(np.sum(delta_volume_PCR_coupled), decimals=-6):
     if ((np.sum(water_volume_PCR_total_in[zip(*CoupledPCRcellIndices)]) - np.sum(water_volume_FM_2_PCR[zip(*CoupledPCRcellIndices)])) / np.sum(delta_volume_PCR_coupled) < 0.95) or \

@@ -377,7 +377,7 @@ while hydrologicModel.get_time_step() < nr_model_timesteps:
     # COMPUTING INUNDATION AS AREA AND AS FRACTION OF PCR-CELL
     # for PCR <-> 1D
     # for PCR <-> 2D
-    # returned both as list for coupled PCR cells only ('*_coupled') and as 2d-arrays to be set back into PCR via BMI
+    # returns both as list for coupled PCR cells only ('*_coupled') and as 2d-arrays to be set back into PCR via BMI
     inundated_area_FM_2_PCR_coupled_1D, inundated_area_FM_2_PCR_coupled, inundated_area_FM_2_PCR, inundated_fraction_FM_2_PCR_coupled, inundated_fraction_FM_2_PCR = model_functions.determine_InundationArea_Hydrodynamics(model_type, 
                                                                                                                                                                                         hydrodynamicModel, 
                                                                                                                                                                                         couple_hydrologicModel_2_hydrodynamicModel,
@@ -395,17 +395,17 @@ while hydrologicModel.get_time_step() < nr_model_timesteps:
     if hydrologicModel.get_time_step() == 2.:
 		plt.figure()
 		plt.imshow(inundated_area_FM_2_PCR)
-		plt.savefig(os.path.join(verbose_folder , 'inundated_area_FM_2_PCR_atTimestep_' + str(hydrologicModel.get_time_step) + '.png'))
+		plt.savefig(os.path.join(verbose_folder , 'inundated_area_FM_2_PCR.png'))
 		plt.figure()
 		plt.imshow(inundated_fraction_FM_2_PCR)
-		plt.savefig(os.path.join(verbose_folder , 'inundated_fraction_FM_2_PCR_atTimestep_' + str(hydrologicModel.get_time_step) + '.png'))
+		plt.savefig(os.path.join(verbose_folder , 'inundated_fraction_FM_2_PCR.png'))
 		plt.close('all')
     
 
     # COMPUTING WATER VOLUME AND DEPTH TO BE COUPLED BACK TO PCR
     # for PCR <-> 1D
     # for PCR <-> 2D
-    # returned only 2d-arrays to be set back into PCR via BMI
+    # returns only 2d-arrays to be set back into PCR via BMI
     water_volume_FM_2_PCR_1D, water_depths_FM_2_PCR_1D, water_volume_FM_2_PCR, water_depths_FM_2_PCR  = model_functions.determine_InundationDepth_Hydrodynamics(model_type, 
 																											hydrodynamicModel, 
 																											landmask_pcr, 
@@ -419,33 +419,39 @@ while hydrologicModel.get_time_step() < nr_model_timesteps:
 
     # DETERMINING NEW STORAGE IN PCR-CHANNELS
     # for PCR <-> 1D
+    # returns 2d-array to be set back into PCR via BMI
     new_storage_pcr = model_functions.determine_new_channelStoragePCR(hydrologicModel, 
                                                                       landmask_pcr, 
                                                                       missing_value_landmask, 
                                                                       water_volume_FM_2_PCR_1D)
     
     # UPDATE VARIABLES IN PCR
+    # for PCR <-> 1D
+    # for PCR <-> 2D
+    # doesn't return anything; updates several variables in PCR based on previously determined 2d-arrays
+    # REMARK: is it actually necessary to update channel storage in PCR?
     model_functions.updateHydrologicVariables(hydrologicModel, 
                                               water_depths_FM_2_PCR, 
                                               inundated_fraction_FM_2_PCR, 
                                               new_storage_pcr)
     
     # retrieving PCR-GLOBWB and converting it to m3/d
-    delta_volume_PCR, delta_volume_PCR_1way = model_functions.calculateDeltaVolumes(hydrologicModel, 
-                                                                                    missing_value_pcr, 
-                                                                                    secPerDay, 
-                                                                                    coupled_hydrologicModel_indices, 
-                                                                                    cellarea_data_pcr, 
-                                                                                    water_volume_FM_2_PCR) 
+    # for PCR <-> 1D
+    delta_volume_PCR, delta_volume_PCR_coupled_1D = model_functions.calculateDeltaVolumes(hydrologicModel, 
+																						  missing_value_pcr, 
+                                                                                          secPerDay, 
+                                                                                          coupled_hydrologicModel_indices, 
+                                                                                          cellarea_data_pcr, 
+                                                                                          water_volume_FM_2_PCR) 
 	
     # removing negative delta volumes where necessary
-    delta_volume_PCR_positiveOnly, delta_volume_PCR_1way_positiveOnly = model_functions.account4negativeDeltaVolumes(hydrodynamicModel, 
-                                                                                                                     model_type, 
-                                                                                                                     coupled_hydrologicModel_indices, 
-                                                                                                                     coupled_hydrologicModel_indices_2way, 
-                                                                                                                     couple_hydrologicModel_2_hydrodynamicModel_2way, 
-                                                                                                                     delta_volume_PCR, 
-                                                                                                                     cellAreaSpherical_2D)
+#    delta_volume_PCR_positiveOnly, delta_volume_PCR_1way_positiveOnly = model_functions.account4negativeDeltaVolumes(hydrodynamicModel, 
+#                                                                                                                     model_type, 
+#                                                                                                                     coupled_hydrologicModel_indices, 
+#                                                                                                                     coupled_hydrologicModel_indices_2way, 
+#                                                                                                                     couple_hydrologicModel_2_hydrodynamicModel_2way, 
+#                                                                                                                     delta_volume_PCR, 
+#                                                                                                                     cellAreaSpherical_2D)
 				                 
     # dividing delta volume from PCR-GLOBWB over hydraulic cells, depending on model specifications
     delta_water_DFM_1way, verbose_volume_DFM_1way = model_functions.calculateDeltaWater(hydrodynamicModel, 
@@ -456,8 +462,6 @@ while hydrologicModel.get_time_step() < nr_model_timesteps:
                                                                                         fraction_timestep, 
                                                                                         model_type, 
                                                                                         use_Fluxes)
-    
-    pdb.set_trace()
     
     # saving PCR-GLOBWB output volumes and volumes used as input to hydraulic models to verbose-folder
     if verbose == True:
