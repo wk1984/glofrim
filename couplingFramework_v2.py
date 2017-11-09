@@ -104,16 +104,23 @@ config.parse_configuration_file(sys.argv[1])
 model_type = config.model_type['model_type']                                                   
 
 use_2way = strtobool(config.general_settings['2way coupling'])
+
 latlon = strtobool(config.general_settings['latlon'])
 if latlon == False:
 	inProj  = pyproj.Proj(init=config.model_settings['model_projection'])
+	
 use_Fluxes = strtobool(config.general_settings['use_Fluxes'])
+
 use_RFS = strtobool(config.general_settings['use_RFS'])
 if use_RFS == False:
 	sys.exit('running GLOFRIM with RFS deactivated not possible anymore... Bummer!')
+	
 verbose = strtobool(config.general_settings['verbose'])
+
 use_floodplain_infiltration_factor = strtobool(config.general_settings['use_floodplain_infiltration_factor'])
+
 adjust_initial_groundwater = strtobool(config.general_settings['adjust_initial_groundwater'])
+adjust_initial_groundwater_file = config.general_settings['adjust_initial_groundwater_file']
 
 # -------------------------------------------------------------------------------------------------
 # SPECIFY NUMERICAL SETTINGS
@@ -136,15 +143,17 @@ missing_value_pcr                     = -999
 # SET PATHS TO MODELS
 # -------------------------------------------------------------------------------------------------
 
+# hydrodynamics
 model_dir       	= config.model_settings['model_dir'] 
 model_file      	= config.model_settings['model_file']
 model_proj			= config.model_settings['model_projection']                                    
 
+# hydrology
 config_pcr       	=  config.PCR_settings['config_pcr']
-landmask_pcr     	=  config.PCR_settings['landmask_pcr']
-clone_pcr        	=  config.PCR_settings['clone_pcr']
-
-adjust_initial_groundwater_file = config.general_settings['adjust_initial_groundwater_file']
+configPCR           = configuration.Configuration()
+configPCR.parse_configuration_file(config_pcr )
+landmask_pcr     	=  configPCR.globalOptions'landmask']
+clone_pcr        	=  configPCR.globalOptions['cloneMap']
 
 # -------------------------------------------------------------------------------------------------
 # SET PATHS TO .SO / .DLL FILES
