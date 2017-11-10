@@ -524,11 +524,22 @@ def noStorage(model_pcr, missing_value_pcr, CoupledPCRcellIndices, CouplePCR2mod
     
 # =============================================================================
     
-def updateHydrologicVariables(model_pcr, water_depths_floodplains_FM_2_PCR, inundated_fraction_floodplains_FM_2_PCR, new_channelStorage_pcr):
+def updateHydrologicVariables(model_pcr, water_depths_floodplains_FM_2_PCR, inundated_fraction_floodplains_FM_2_PCR, new_channelStorage_pcr, couple_channel_storage):
     """
-    This functions update variables in the hydrologic models based on hydrodynamics
+    This functions update inundation depth and fraction in the hydrologic models based on hydrodynamic results
     
-    TO DO: the water volume that is coupled back seems very large!
+    Input:
+    -----
+    model_pcr:									BMI-adapter of coupled hydrologic model
+    water_depths_floodplains_FM_2_PCR:			water depth [m] for all PCR cells coupled to 2-D floodplain cells
+    inundated_fraction_floodplains_FM_2_PCR:	inundated fraction [-] of each PCR cell coupled to 2-D floodplain cells
+    new_channelStorage_pcr:						2d-array with updated channel storage information (PCR cells coupled to 1-D channel cells)
+    
+    Output:
+    ------
+    None
+    
+    TODO: extend to paddy and nonPaddy landcover!!!
     """
 
     # add water from FM floodplains back to PCR
@@ -539,16 +550,17 @@ def updateHydrologicVariables(model_pcr, water_depths_floodplains_FM_2_PCR, inun
     model_pcr.set_var(('grassland','inundatedFraction'), inundated_fraction_floodplains_FM_2_PCR)
     model_pcr.set_var(('forest','inundatedFraction'), inundated_fraction_floodplains_FM_2_PCR)
     
-    # add water from FM rivers back to PCR
-    print '\nwater volume added to channelStorage in PCR %.2E' % np.sum(new_channelStorage_pcr)
-    print ''
-    model_pcr.set_var(('routing','channelStorage'), new_channelStorage_pcr)
+    if couple_channel_storage == True:
+        # add water from FM rivers back to PCR
+        print '\nwater volume added to channelStorage in PCR %.2E' % np.sum(new_channelStorage_pcr)
+        print ''
+        model_pcr.set_var(('routing','channelStorage'), new_channelStorage_pcr)
         
-#    	 # assuming this in not required anymore if RFS is implemented differently than in Arjen's version
-#		 # could however still be implemented just that then it would be one array and not the fractions and in the worst case the fraction is 1 always?
-
-#        # set the variable for dealing with river (water bodies) area fraction in PCR
-#        model_pcr.set_var(('routing','waterBodyFractionFM'), inundated_fraction_rivers_FM_2_PCR)
+#   # assuming this in not required anymore if RFS is implemented differently than in Arjen's version
+#	# could however still be implemented just that then it would be one array and not the fractions and in the worst case the fraction is 1 always?
+#
+#   # set the variable for dealing with river (water bodies) area fraction in PCR
+#   model_pcr.set_var(('routing','waterBodyFractionFM'), inundated_fraction_rivers_FM_2_PCR)
     
     return
     
@@ -941,115 +953,130 @@ def set_zeroTopWaterlayer(model_pcr, CoupledPCRcellIndices, value=0.):
 	
 # =============================================================================
 	
-def account4negativeDeltaVolumes(model_hydr, model_type, CoupledPCRcellIndices, CoupledPCRcellIndices_2way, CouplePCR2model_2way, delta_volume_PCR_2dArray, cellAreaSpherical):
+def account4negativeDeltaVolumes(model_hydr, model_type, CoupledPCRcellIndices, CoupledPCRcellIndices_2way, CouplePCR2model_2way, delta_volume_PCR_2d, cellAreaSpherical):
 	"""
-	With this function, we loop over all PCR-cells and check whether the delta volume is negative or not. If the former is the case,
-	which means that more water is present in DFM/LFP than simulated by PCR, water volume from DFM/LFP is removed until it matches
-	the volume as simulated by PCR
+	While water depth will need to differ between hydrology and hydrodynamics (due to differences in grid size), the volumes of a PCR cell and all hydrodynamic cells in between should match.
+	This excludes volumes in channels because PCR volumes are determined based on runoff.
+	If PCR predicts higher volumes than in DFM/LFP, the volume in DFM/LFP will be raised accordingly.
+	If PCR predicts lower volumes than in DFM/LFP, then the volumes in DFM/LFP will have to be reduced.
+	This requires the alignment of water levels in DFM/LFP according to the reduction of volume.
 	
-	TO DO: instead of updating water level
+	Input:
+	-----
+	model_hydr: 					BMI adapter of hydrodynamic model
+	model_type: 					either DFM or LFP
+	CoupledPCRcellIndices: 			list of PCR-cell entries coupled to 1d channel cells (for coupling to DFM/LFP)
+	CoupledPCRcellIndices_2way:		list of PCR-cell entries coupled to 2d floodplain cells (for feedback from DFM/LFP)
+	
+	
+	Output:
+	------
+	asdf
+	
+	TO DO: we are now implying that hydrodynamics have to be adapted according to the hydrologic prediction. But isn't it possible to make it the other way?
 	
 	"""
 	
-	# converting array with PCR map dimensions to list containing only those entries coupled to a 2-D hydrodynamic cell
-	delta_volume_PCR_ini = delta_volume_PCR_2dArray[zip(*CoupledPCRcellIndices_2way)]
+	# converting 2d-array of delta volume of all PCR cells to a list with all entries coupled to 2d hydrodynamic floodplain cells
+	delta_volume_PCR_ini = delta_volume_PCR_2d[zip(*CoupledPCRcellIndices_2way)]
+	
 	# copying array to faciliate comparison later on
-	delta_volume_PCR = np.copy(delta_volume_PCR_ini)
 	delta_volume_PCR_positiveOnly = np.copy(delta_volume_PCR_ini)
 	
 	# printing the total delta volume for all PCR cells coupled to a 2-D hydrodynamic cell
-	print '\ndelta volume for 2way-coupled cells before accounting %.2E' % np.sum(delta_volume_PCR)
-	# printing total number of PCR cells that have a negative delta volume for the current time step
-	print 'number cells with negative volume before accounting ', len(np.where(delta_volume_PCR < 0.)[0])
+	print '\ndelta volume for 2way-coupled cells before accounting %.2E' % np.sum(delta_volume_PCR_ini)
 	
-	# writing all those entries to a list
-	negative_entries = np.where(delta_volume_PCR < 0.)[0]
-	PCRcellindicesnegative = []
+	# printing total number of PCR cells that have a negative delta volume for the current time step
+	print 'number cells with negative volume before accounting ', len(np.where(delta_volume_PCR_ini < 0.)[0])
+	
+	# writing all those entries to a list 
+	negative_entries = np.where(delta_volume_PCR_ini < 0.)[0]
+	indices_PCRcells_negativeDeltaVolume = []
 	for q in xrange(len(negative_entries)):
-		PCRcellindicesnegative.append(negative_entries[q])
+		indices_PCRcells_negativeDeltaVolume.append(negative_entries[q])
 		
 	# printing the entry number of those PCR cells with a negative delta volume
-	print 'entries fo cells with negative volume before accounting ', PCRcellindicesnegative
+	print 'entries fo cells with negative volume before accounting ', indices_PCRcells_negativeDeltaVolume
 	print ''
 
 	# retrieving the water level/depth of all hydrodynamic cells for the current time step
 	# (does not make a difference whether level or depth because following computations are only relative to it)
 	if model_type == 'DFM':
-		water_level_DFM = model_hydr.get_var('s1')
+		water_height = model_hydr.get_var('s1')
 	elif model_type == 'LFP':
-		water_depth_LFP = model_hydr.get_var('H')
+		water_height = model_hydr.get_var('H')
+		water_height = water_height.ravel()
 			
-	# loop over all coupled PCR cells coupled to a 2-D hydrodynamic cell
+	# loop over all coupled PCR cells coupled to a 2-D hydrodynamic floodplain cell
 	for i in range(len(CouplePCR2model_2way)):
 		
-		# check whether algorithm needs to be activated
 		# if it's positive, that's fine and no accounting has to take place
-		if delta_volume_PCR[i] >= 0.:
+		if delta_volume_PCR_ini[i] >= 0.:
 			pass 
 	    
-		# if it's negative, there is too much water in hydraulics compared to hdyrology and thus volume needs to be removed
-		# (this somehow implies that the prediction of the hydrologic model is correct, but that's the same for runoff generation too...)
-		elif delta_volume_PCR[i] < 0.:
+		# if it's negative, there is too much water in hydraulics compared to hdyrology and thus volume needs to be removed and water levels aligned
+		elif delta_volume_PCR_ini[i] < 0.:
 			
-			print '\n>>> accounting for negative volumes <<<\n'
+			print '\n>>> accounting for negative volumes required <<<\n'
 			 
 	        # retrieving the negative volume of the current PCR cell under consideration
-			remaining_negative_delta_volume = delta_volume_PCR[i]
+			remaining_negative_delta_volume = delta_volume_PCR_ini[i]
+			
 			# printing the PCR entry number as well as the associated negative delta volume
-			print '\nremaining negative delta volume for PCR cell ', str(i), 'is %.2E' % remaining_negative_delta_volume
+			print '\nremaining negative delta volume for PCR cell', str(i), 'is %.2E' % remaining_negative_delta_volume
 	
 	        # get all coupled 2-D hydrodynamic cells of the current PCR cell under consideration
 			current_model_cell_indices = CouplePCR2model_2way[i][1]
+			
 			# printing the total number of 2-D hydrodynamic cells
-			print 'hydrodyn. cells in PCR cell ', str(i), 'are ', len(current_model_cell_indices)
+			print 'hydrodyn. cells in PCR cell', str(i), 'are ', len(current_model_cell_indices)
 
 	        # get current water levels/depths of these cells
-			if model_type == 'DFM':
-				current_water_depth = water_level_DFM[current_model_cell_indices]
-			elif model_type == 'LFP':
-				current_water_depth = water_depth_LFP[current_model_cell_indices]
+			current_water_height = water_height[current_model_cell_indices]
+			
+			print current_water_height
+			pdb.set_trace()
 		
 	        # set variable for tracking water depths
-			new_water_depth = np.copy(current_water_depth)
-			
-			#pdb.set_trace()
+			new_water_depth = np.copy(current_water_height)
 	
-	        # while there is negative delta volume, remove water from wet cells
+	        # while there is negative delta volume, remove water from wet cells to align recution volume with reduction water level
 			while remaining_negative_delta_volume < 0:
                 
                 # find remaining wet cells
+                # indices within PCR cell
 				remaining_wet_cells_temp_indices  = np.where(new_water_depth > 0.)[0]
-				#print 'remaining wet cell indices ', len(remaining_wet_cells_temp_indices)
+							
+				# indices with respect to all hydrodynamic cell indices
 				remaining_wet_cells_total_indices = current_model_cell_indices[remaining_wet_cells_temp_indices]
+				print ' remaining WET hydrodyn. cells in PCR cell ', str(i), 'are ', len(remaining_wet_cells_total_indices ), 'from in total ',len(current_model_cell_indices),'cells'
                 
                 # if no remaining wet cells are found, no more water can be removed and the while-loop should stop
-                # this probably means that the remaining delta volume is very low
+                # this probably means that the remaining delta volume is very low (but just not yet 0)
 				if len(remaining_wet_cells_temp_indices) != 0:
 					pass
 				else:
 					print 'no remaining wet cell indices, break loop here and return'
 					break
                 
+                
+                ### CONTINUE HERE ###
+                
                 # find cell with least amount of water
 				min_water_depth_value = np.min(new_water_depth[remaining_wet_cells_temp_indices])
 				min_water_depth_index = np.argmin(new_water_depth[remaining_wet_cells_temp_indices])
                 
-                # calculate the total volume that is about to be removed from FM
+                # calculate the total volume that is about to be removed
 				total_volume_about_to_be_removed = np.sum(min_water_depth_value  * cellAreaSpherical[remaining_wet_cells_total_indices])
-				# print '\ntotal volume to about to be removed is ', total_volume_about_to_be_removed
 
                 # check if removing this from all wet cells will not exceed the remaining 'delta volume'
 				if (-1 * remaining_negative_delta_volume) > total_volume_about_to_be_removed:
-					#print 'total volume to be removed does NOT exceed remaining negative volume!'
                     
                     # remove water from all wet cells
 					new_water_depth[remaining_wet_cells_temp_indices] -= min_water_depth_value
                     
                     # remove corresponding volume from remaining 'delta volume'
 					remaining_negative_delta_volume+= total_volume_about_to_be_removed
-					
-					#print 'remaining negative delta volume ', remaining_negative_delta_volume
-					#print ''
                     
                 # or, if volume to be removed would exceed 'delta volume', remove less than this instead
 				else:

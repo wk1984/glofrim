@@ -35,6 +35,8 @@ use_floodplain_infiltration_factor = False
 adjust_initial_groundwater = False
 # if above is set to True, provide file with scaling properties; if not, specify anything
 adjust_initial_groundwater_file = path/to/file.txt
+# coupled back channel storage from DFM to PCR
+couple_channel_storage = False
 
 [numerical_settings]
 # specify model timesteps

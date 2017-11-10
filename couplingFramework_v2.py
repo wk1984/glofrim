@@ -122,6 +122,8 @@ use_floodplain_infiltration_factor = strtobool(config.general_settings['use_floo
 adjust_initial_groundwater = strtobool(config.general_settings['adjust_initial_groundwater'])
 adjust_initial_groundwater_file = config.general_settings['adjust_initial_groundwater_file']
 
+couple_channel_storage = strtobool(config.general_settings['couple_channel_storage'])
+
 # -------------------------------------------------------------------------------------------------
 # SPECIFY NUMERICAL SETTINGS
 # -------------------------------------------------------------------------------------------------
@@ -152,8 +154,9 @@ model_proj			= config.model_settings['model_projection']
 config_pcr       	=  config.PCR_settings['config_pcr']
 configPCR           = configuration.Configuration()
 configPCR.parse_configuration_file(config_pcr )
-landmask_pcr     	=  configPCR.globalOptions'landmask']
-clone_pcr        	=  configPCR.globalOptions['cloneMap']
+inputDIR 				= configPCR.globalOptions['inputDir'] 
+clone_pcr 				= os.path.join(inputDIR, configPCR.globalOptions['cloneMap']) 
+landmask_pcr 				= os.path.join(inputDIR, configPCR.globalOptions['landmask'])
 
 # -------------------------------------------------------------------------------------------------
 # SET PATHS TO .SO / .DLL FILES
@@ -439,10 +442,13 @@ while hydrologicModel.get_time_step() < nr_model_timesteps:
     # for PCR <-> 2D
     # doesn't return anything; updates several variables in PCR based on previously determined 2d-arrays
     # REMARK: is it actually necessary to update channel storage in PCR?
+    # QUESTION: why doing this before actually accounting for negative water volumes? wouldn't it make more sense to first adapt water levels in DFM and then determine water depth and inundation fraction?
+	#           and these water levels/fraction would then be set back to PCR to force MODFLOW....
     model_functions.updateHydrologicVariables(hydrologicModel, 
                                               water_depths_FM_2_PCR, 
                                               inundated_fraction_FM_2_PCR, 
-                                              new_storage_pcr)
+                                              new_storage_pcr,
+                                              couple_channel_storage)
     
     # retrieving PCR-GLOBWB and converting it to m3/d
     # for PCR <-> 1D
@@ -454,13 +460,14 @@ while hydrologicModel.get_time_step() < nr_model_timesteps:
                                                                                           water_volume_FM_2_PCR) 
 	
     # removing negative delta volumes where necessary
-#    delta_volume_PCR_positiveOnly, delta_volume_PCR_1way_positiveOnly = model_functions.account4negativeDeltaVolumes(hydrodynamicModel, 
-#                                                                                                                     model_type, 
-#                                                                                                                     coupled_hydrologicModel_indices, 
-#                                                                                                                     coupled_hydrologicModel_indices_2way, 
-#                                                                                                                     couple_hydrologicModel_2_hydrodynamicModel_2way, 
-#                                                                                                                     delta_volume_PCR, 
-#                                                                                                                     cellAreaSpherical_2D)
+    # QUESTION: would it be possible to just adapt volumes in DFM based on delta volume? what would happen then with water levels if volume is added/removed? are they automatically increased/lowered?
+    delta_volume_PCR_positiveOnly, delta_volume_PCR_1way_positiveOnly = model_functions.account4negativeDeltaVolumes(hydrodynamicModel, 
+                                                                                                                     model_type, 
+                                                                                                                     coupled_hydrologicModel_indices, 
+                                                                                                                     coupled_hydrologicModel_indices_2way, 
+                                                                                                                     couple_hydrologicModel_2_hydrodynamicModel_2way, 
+                                                                                                                     delta_volume_PCR, 
+                                                                                                                     cellAreaSpherical_2D)
 				                 
     # dividing delta volume from PCR-GLOBWB over hydraulic cells, depending on model specifications
     delta_water_DFM_1way, verbose_volume_DFM_1way = model_functions.calculateDeltaWater(hydrodynamicModel, 
