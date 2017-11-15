@@ -996,13 +996,13 @@ def account4negativeDeltaVolumes(model_hydr, model_type, CoupledPCRcellIndices, 
 		indices_PCRcells_negativeDeltaVolume.append(negative_entries[q])
 		
 	# printing the entry number of those PCR cells with a negative delta volume
-	print 'entries fo cells with negative volume before accounting ', indices_PCRcells_negativeDeltaVolume
+	print 'entries of cells with negative volume before accounting ', indices_PCRcells_negativeDeltaVolume
 	print ''
 
-	# retrieving the water level/depth of all hydrodynamic cells for the current time step
+	# retrieving the water heigt of all hydrodynamic cells for the current time step
 	# (does not make a difference whether level or depth because following computations are only relative to it)
 	if model_type == 'DFM':
-		water_height = model_hydr.get_var('s1')
+		water_height = model_hydr.get_var('s1') - model_hydr.get_var('bl')
 	elif model_type == 'LFP':
 		water_height = model_hydr.get_var('H')
 		water_height = water_height.ravel()
@@ -1033,14 +1033,11 @@ def account4negativeDeltaVolumes(model_hydr, model_type, CoupledPCRcellIndices, 
 
 	        # get current water levels/depths of these cells
 			current_water_height = water_height[current_model_cell_indices]
-			
-			print current_water_height
-			pdb.set_trace()
 		
 	        # set variable for tracking water depths
 			new_water_depth = np.copy(current_water_height)
 	
-	        # while there is negative delta volume, remove water from wet cells to align recution volume with reduction water level
+	        # while there is negative delta volume, remove water from wet cells to align redution volume with reduction water level
 			while remaining_negative_delta_volume < 0:
                 
                 # find remaining wet cells
@@ -1059,9 +1056,6 @@ def account4negativeDeltaVolumes(model_hydr, model_type, CoupledPCRcellIndices, 
 					print 'no remaining wet cell indices, break loop here and return'
 					break
                 
-                
-                ### CONTINUE HERE ###
-                
                 # find cell with least amount of water
 				min_water_depth_value = np.min(new_water_depth[remaining_wet_cells_temp_indices])
 				min_water_depth_index = np.argmin(new_water_depth[remaining_wet_cells_temp_indices])
@@ -1071,37 +1065,50 @@ def account4negativeDeltaVolumes(model_hydr, model_type, CoupledPCRcellIndices, 
 
                 # check if removing this from all wet cells will not exceed the remaining 'delta volume'
 				if (-1 * remaining_negative_delta_volume) > total_volume_about_to_be_removed:
+					
+					print '...negative delta volume was %.2E' % np.absolute(remaining_negative_delta_volume)
                     
-                    # remove water from all wet cells
+                    # remove water from all wet cells, i.e. water heigth of all cells is uniformly reduced by value of minimum water height before reduction
 					new_water_depth[remaining_wet_cells_temp_indices] -= min_water_depth_value
                     
                     # remove corresponding volume from remaining 'delta volume'
-					remaining_negative_delta_volume+= total_volume_about_to_be_removed
+					remaining_negative_delta_volume += total_volume_about_to_be_removed
+					
+					print 'before removing a volume of %.2E' % total_volume_about_to_be_removed
+					print 'new negative delta volume is now %.2E' % np.absolute(remaining_negative_delta_volume)
                     
                 # or, if volume to be removed would exceed 'delta volume', remove less than this instead
 				else:
-					print 'total volume to be removed DOES exceed remaining negative volume because...'
+					
+					print 'total volume to be removed EXCEEDS remaining negative volume because...'
 					print '...negative delta volume is only %.2E' % np.absolute(remaining_negative_delta_volume)
+					print 'and volume to be removed is %.2E' % total_volume_about_to_be_removed
                     
                     # calculate additional water depths to be removed from all wet cells to reach remaining delta volume
 					remove_water_depths_extra = (remaining_negative_delta_volume/len(remaining_wet_cells_temp_indices)) / cellAreaSpherical[remaining_wet_cells_total_indices]
 
                     # remove water from all wet cells
 					new_water_depth[remaining_wet_cells_temp_indices] += remove_water_depths_extra
-					
-					#pdb.set_trace()
                     
                     # check if there are negative water depths, and if so, repeat process
                     # -------------------------------------------------------------------
 					while any(new_water_depth < 0):
-						print 'there are cells with negative water depths'
-						pdb.set_trace()
-                        
+						
+						print 'there are hydrodynamic cells with negative water depths'
+						print 'at locations ', np.where(new_water_depth < 0)
+						                    
                         # reset negative water depths to zero and count the 'missing' volume
 						temp_vol_was_negative = 0
+						
+						#search for entries where new_water_depth is negative
 						for k in range(len(new_water_depth)):
+							
 							if new_water_depth[k] < 0:
+								
+								# computing volume per cell with negative water depth
 								temp_vol_was_negative -= (new_water_depth[k] * -1) * cellAreaSpherical[current_model_cell_indices[k]]
+								
+								# instead of negative depth, add 0 m as depth, i.e. dry cell
 								new_water_depth[k] = 0.
                                 
                         # this represents the volume that is being 'added back' to the delta volume to then be removed again from wet cells
@@ -1118,20 +1125,24 @@ def account4negativeDeltaVolumes(model_hydr, model_type, CoupledPCRcellIndices, 
 						new_water_depth[remaining_wet_cells_temp_indices] += remove_water_depths_extra
                     # -------------------------------------------------------------------
                     
-                    # set 'delta volume' to zero (so while-loop will end)
+					print 'that means no hydrodynamic cells with negative water depths found anymore'
+					print 'at locations ', np.where(new_water_depth < 0)
+                    
+                    # set 'delta volume' to zero (so while-loop will en
 					remaining_negative_delta_volume = 0. 
 					
 			# also, set delta volume at this entry to zero for later use in other functions
 			delta_volume_PCR_positiveOnly[i] = 0.
 	
-			#TODO: maybe the SAAD error is related to wrong/weird water levels set back to DFM?
-#			if model_type == 'DFM':
-#				model_hydr.set_var('s1', new_water_depth)
-#			elif model_type == 'LFP':
-#				model_hydr.get_var('H')[:] = new_water_depth
+			if model_type == 'DFM':
+				new_water_depth = model_hydr.get_var('bl')[current_model_cell_indices] + new_water_depth
+				model_hydr.set_var('s1', new_water_depth)
+			elif model_type == 'LFP':
+				model_hydr.get_var('H')[:] = new_water_depth
 		
 	for r in xrange(len(PCRcellindicesnegative)):
 		print 'new delta volume at previously negative entry ',PCRcellindicesnegative[r],'is %.2E' % delta_volume_PCR_positiveOnly[PCRcellindicesnegative[r]]
+		
 	print '\ndelta volume after accounting %.2E' % np.sum(delta_volume_PCR_positiveOnly)
 	print 'difference in delta volumes before/after accounting %.2E' % (np.absolute(np.sum(delta_volume_PCR)) - np.absolute(np.sum(delta_volume_PCR_positiveOnly)))
 	print ''
@@ -1141,7 +1152,5 @@ def account4negativeDeltaVolumes(model_hydr, model_type, CoupledPCRcellIndices, 
 	
 	# converting array with PCR map dimensions to list containing only those entries coupled to a 1-D hydrodynamic cell 
 	delta_volume_PCR_coupled_positiveOnly = delta_volume_PCR_positiveOnly_2d[zip(*CoupledPCRcellIndices)]
-	
-#	pdb.set_trace()
-		
+			
 	return delta_volume_PCR_positiveOnly, delta_volume_PCR_coupled_positiveOnly
