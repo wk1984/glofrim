@@ -2,10 +2,6 @@
 # either "DFM" for Delft3D Flexible Mesh or "LFP" for Lisflood-FP v5.9
 model_type = DFM
 
-[model_paths]
-path2DFM = path/to/libdflowfm.so
-path2LFP = path/to/liblisflood.so
-
 [model_settings]
 # path where either mdu- or par-file is located
 model_dir       = /path/to/mdu/or/par/file/
@@ -45,4 +41,3 @@ number_of_timesteps = 2556
 update_step = 1800
 # set threshold [m] above which a cell is considered 'inundated'
 threshold_inundated_depth = 0.05
-
