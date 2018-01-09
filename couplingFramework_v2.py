@@ -206,12 +206,14 @@ print '\n>>> ',model_type,' Initialized <<<\n'
 # -------------------------------------------------------------------------------------------------
 # EXCTRACTING RELEVANT DATA FROM MODELS
 # -------------------------------------------------------------------------------------------------
+#
 
 if model_type == 'DFM':
 
     #- retrieving data from Delft3D FM
-    x_coords, y_coords, z_coords, bottom_lvl, cell_points_fm, separator_1D, cellAreaSpherical_1D, cellAreaSpherical_2D, xz_coords, yz_coords, hydrodynamic_coords_1D, hydrodynamic_coords_2D,\
-                cellarea_data_pcr, landmask_data_pcr, clone_data_pcr = model_functions.extractModelData_FM(hydrodynamicModel, hydrologicModel, landmask_pcr, clone_pcr, use_RFS, use_2way)
+    x_coords, y_coords, z_coords, bottom_lvl, cell_points_fm, separator_1D, cellAreaSpherical_1D, cellAreaSpherical_2D, xz_coords, yz_coords, \
+					hydrodynamic_coords_1D, hydrodynamic_coords_2D = model_functions.extractModelData_DFM(hydrodynamicModel, hydrologicModel, \
+																									landmask_pcr, clone_pcr, use_RFS, use_2way)
     coupledFPindices = 0.
     print '\n>>> DFM data retrieved <<<\n'
 
@@ -219,8 +221,9 @@ elif model_type == 'LFP':
 
     #- retrieving data from LISFLOOD-FP
     dx, dy, DEM, bottom_lvl, H, waterDepth, rows, cols, \
-                list_x_coords, list_x_coords_2way, list_y_coords, list_y_coords_2way, coupledFPindices, coupledFPindices_2way, grid_dA, cellAreaSpherical_1D, SGCQin, separator_1D,\
-                cellarea_data_pcr, landmask_data_pcr, clone_data_pcr = model_functions.extractModelData_FP(hydrodynamicModel, model_dir, hydrologicModel, landmask_pcr, clone_pcr, verbose_folder, use_RFS, use_2way, verbose)
+                list_x_coords, list_x_coords_2way, list_y_coords, list_y_coords_2way, coupledFPindices, coupledFPindices_2way, grid_dA, cellAreaSpherical_1D, \
+				SGCQin, separator_1D, = model_functions.extractModelData_LFP(hydrodynamicModel, model_dir, hydrologicModel, landmask_pcr, clone_pcr, \
+																											verbose_folder, use_RFS, use_2way, verbose)
 
     cellAreaSpherical_2D = np.copy(cellAreaSpherical_1D)
 

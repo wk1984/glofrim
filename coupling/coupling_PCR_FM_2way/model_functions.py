@@ -4,7 +4,7 @@ Set of functions related to the coupling of PCR-GLOBWB with Delft 3D Flexible Me
 Unlike the "coupling_functions" where primarily the grids are spatially coupled,
 this set of functions executes the actual model functions to manipulate model
 arrays and to compute the required volumes and depths, as well as updating
-the models. 
+the models.
 
 Please note: currently only to be used for 1way-coupling!!!
 Development for 2way-coupling is ongoing.
@@ -46,11 +46,11 @@ def write2log(model_dir, model_file, latlon, use_2way, useFluxes, use_RFS, use_f
     diagnosis and settings to the dia-file.
     Also verbose-output (if verbose == True) is stored in the created directory.
     """
-    
+
     #- creating folder to store verbose and log output
     folder_name = model_dir + model_file + '_verboseOut'
-        
-    #-write end time of simulation finished when finished    
+
+    #-write end time of simulation finished when finished
     if moment == 'start':
         #- print info to console at start of simulation
         print '\n##############################'
@@ -63,23 +63,23 @@ def write2log(model_dir, model_file, latlon, use_2way, useFluxes, use_RFS, use_f
         print 'RFS on: ', bool(use_RFS)
         print 'use floodplain infiltration factor: ', bool(use_floodplain_infiltration_factor)
         print 'adjust initial groundwater: ', bool(adjust_initial_groundwater)
-        print 'verbose mode on: ', bool(verbose) 
+        print 'verbose mode on: ', bool(verbose)
         if verbose == True:
             print '\nVerbose Output and Log-File saved in: ', folder_name + os.linesep
         else:
             print ''
-		
+
     elif (moment == 'end') and (verbose == True):
         #- check if folder has already been created
         if os.path.exists(folder_name):
             pass
         else:
             os.mkdir(folder_name)
-			
+
 		#- crate log-file
         fo_name = model_file + '_couplingLog.txt'
         fo = open((os.path.join(folder_name, fo_name)),'w')
-		
+
         #- write info to log-file
         fo.write('\nmodel_file chosen: ')
         fo.write(model_file + os.linesep)
@@ -95,44 +95,65 @@ def write2log(model_dir, model_file, latlon, use_2way, useFluxes, use_RFS, use_f
         fo.write(str(bool(use_RFS)) + os.linesep)
         fo.write('model end-time:')
         fo.write(str(datetime.datetime.now()) + os.linesep)
-		#- close log-file    
+		#- close log-file
         fo.close()
-    
+
     return folder_name
 
 # =============================================================================
 
-def extractModelData_FM(model, model_pcr, landmask_pcr, clone_pcr, useRFS, use_2way):
+def extractModelData_PCR(model_pcr, landmask_pcr, clone_pcr)
     """
-    Extracting data by using BMI-command "get_var", and preparing it depending 
+    Extracting data by using BMI-command "get_var" from PCR-GLOBWB
+    """
+
+    # retrieve PCR-data
+    cellarea_data_pcr    = model_pcr.get_var('cellArea')
+    landmask_data_pcr    = pcr.readmap(landmask_pcr)
+    clone_data_pcr       = pcr.readmap(clone_pcr)
+
+    return cellarea_data_pcr, landmask_data_pcr, clone_data_pcr
+
+# =============================================================================
+
+def extractModelData_DFM(model, model_pcr, landmask_pcr, clone_pcr, useRFS, use_2way):
+    """
+    Extracting data by using BMI-command "get_var", and preparing it depending
     on model specification from initialized Delft3D FM model to be used later in the model run.
     There is a wider range of flexible mesh variables exposed which can be made use of
     if required. The number of variables exposed depends on DFM version in use.
-    
+
     TO DO: for 2way coupling, also cellAreaSpherical etc needs to be available in two separate variables!!!
     """
-	
+
     cell_points_fm           = model.get_var('flowelemnode')	# list with number of 2D cell points
-    
-    # define separator between 2D and 1D parts of arrays
+
+    # define separator between 2D and 1D parts of arrays if specified
+    # otherwise PCR will be coupled to all DFM cells, ie both 1D and 2D
+    # array structure in DFM: 2d nodes, 1d nodes
     if useRFS == True:
         separator = len(cell_points_fm)
     else:
-        separator = 0.   
-		 
+        separator = 0.
+
+    # get full arrays
     x_coords                 = model.get_var('xk') 				# x-coords of each cell corner point
     y_coords                 = model.get_var('yk') 				# y-coords of each cell corner point
     z_coords                 = model.get_var('zk') 				# elevation value of each cell corner point
     bottom_lvl               = model.get_var('bl') 				# surface elevation of each cell point
-    bottom_lvl 				 = bottom_lvl[separator:]
     cellAreaSpherical        = model.get_var('ba') 				# cell area
-    cellAreaSpherical_1way	 = cellAreaSpherical[separator:]
-    cellAreaSpherical_2way	 = cellAreaSpherical[:separator]
     xz_coords	             = model.get_var('xz')				# x-coords of each cell centre point
-    xz_coords 				 = xz_coords[separator:]
     yz_coords          		 = model.get_var('yz')				# y-coords of each cell centre point
+
+    # separating arrays
+    bottom_lvl 				 = bottom_lvl[separator:]
+    cellAreaSpherical_1way	 = cellAreaSpherical[separator:]
+    xz_coords 				 = xz_coords[separator:]
     yz_coords 				 = yz_coords[separator:]
-    
+    # if 2way is True (which means that RFS is active!), also the 2D cells are necessary for coupling back to PCR cells
+    if use_2way == True:
+        cellAreaSpherical_2way	 = cellAreaSpherical[:separator]
+
     # preparing the DFM-coords as tuples containing x,y coords
     # for 1D part, x- and y-coords of centre points just have to be combined
     if useRFS == True:
@@ -152,24 +173,19 @@ def extractModelData_FM(model, model_pcr, landmask_pcr, clone_pcr, useRFS, use_2
     elif use_2way == False:
         modelCoords_2way = []
 
-    # retrieve PCR-data
-    cellarea_data_pcr    = model_pcr.get_var('cellArea')
-    landmask_data_pcr    = pcr.readmap(landmask_pcr)
-    clone_data_pcr       = pcr.readmap(clone_pcr)
-    
-    return x_coords, y_coords, z_coords, bottom_lvl, cell_points_fm, separator, cellAreaSpherical_1way, cellAreaSpherical_2way, xz_coords, yz_coords, modelCoords, modelCoords_2way, \
-                cellarea_data_pcr, landmask_data_pcr, clone_data_pcr
-                
+    return x_coords, y_coords, z_coords, bottom_lvl, cell_points_fm, separator, cellAreaSpherical_1way, cellAreaSpherical_2way, \
+                                                                            xz_coords, yz_coords, modelCoords, modelCoords_2way
+
 # =============================================================================
-    
-def extractModelData_FP(model, model_dir, model_pcr, landmask_pcr, clone_pcr, verbose_folder, use_RFS, use_2way, verbose):
+
+def extractModelData_LFP(model, model_dir, model_pcr, landmask_pcr, clone_pcr, verbose_folder, use_RFS, use_2way, verbose):
     """
-    Extracting data by using BMI-command "get_var", and preparing it depending 
+    Extracting data by using BMI-command "get_var", and preparing it depending
     on model specification from initialized LISFLOOD-FP model to be used later in the model run.
     List of variables can be extended, but needs to be specified in 'lib_bmi.cpp' first with
     correct data type declaration.
     """
-	
+
     BLx                      = model.get_var('blx') 			# x-coord of bottom left corner of grid
     BLy                      = model.get_var('bly') 			# y-coord of bottom left corner of grid
     dx                       = model.get_var('dx') 				# incremental distance in x-direction
@@ -179,29 +195,29 @@ def extractModelData_FP(model, model_dir, model_pcr, landmask_pcr, clone_pcr, ve
     H                        = model.get_var('H') 				# array with water depth values
     SGCwidth                 = model.get_var('SGCwidth') 		# array with water depth values
     SGCQin                   = model.get_var('SGCQin') 			# array with discharge to be added to model (better than changing H)
-    
+
     # getting dimensions of model grid
-    rows, cols = DEM.shape 
-    
+    rows, cols = DEM.shape
+
     # converting arrays to flattened array to be processed later
     # required since Delft3D DFM stores data in flattened arrays too
-    list_dA = grid_dA.ravel() 
+    list_dA = grid_dA.ravel()
     bottom_lvl = DEM.ravel()
     waterDepth = H.ravel()
-    
+
     # initialize empty grids for model area to be filled later
     grid_x_coords = np.zeros([rows, cols])
-    grid_y_coords = np.zeros([rows, cols]) 
-    
+    grid_y_coords = np.zeros([rows, cols])
+
     # computing centre points x- and y-coordinates of each grid cell
     for i in xrange(rows):
         grid_x_coords[i, :] = BLx + (np.arange(cols) + 0.5) * dx
     for i in xrange(cols):
         grid_y_coords[:, i] = BLy + (np.arange(rows) + 0.5) * dy
     # flipping array required since we start from bottom left
-    grid_y_coords = np.flipud(grid_y_coords) 
-    
-    # compute list with centre point coords of each LFP-cell to be coupled to PCR-GLOBWB 
+    grid_y_coords = np.flipud(grid_y_coords)
+
+    # compute list with centre point coords of each LFP-cell to be coupled to PCR-GLOBWB
     # if RFS active, mask LFP-cells only to those with channel data and without missing values
     if use_RFS == True:
         i, j = np.where(np.logical_and(SGCwidth > 0., DEM != -9999))
@@ -212,7 +228,7 @@ def extractModelData_FP(model, model_dir, model_pcr, landmask_pcr, clone_pcr, ve
         i, j = np.where(DEM != -9999)
         list_x_coords = grid_x_coords[i, j]
         list_y_coords = grid_y_coords[i, j]
-        coupledFPindices = zip(i, j)    
+        coupledFPindices = zip(i, j)
     if use_2way == True:
         i, j = np.where(DEM != -9999)
         list_x_coords_2way = grid_x_coords[i, j]
@@ -222,7 +238,7 @@ def extractModelData_FP(model, model_dir, model_pcr, landmask_pcr, clone_pcr, ve
 		list_x_coords_2way = []
 		list_y_coords_2way = []
 		coupledFPindices_2way = []
-		        
+
     # print and save verbose output
     if verbose == True:
         print 'x, y of corners of overall grid'
@@ -236,34 +252,29 @@ def extractModelData_FP(model, model_dir, model_pcr, landmask_pcr, clone_pcr, ve
         fig = plt.figure()
         plt.imshow(np.ma.masked_outside(DEM, -1000,1000), cmap='terrain')
         plt.colorbar()
-        plt.savefig(os.path.join(verbose_folder, 'DEM.png')) 
+        plt.savefig(os.path.join(verbose_folder, 'DEM.png'))
         plt.close(fig)
-                
-    # retrieve PCR-data
-    cellarea_data_pcr    = model_pcr.get_var('cellArea')
-    landmask_data_pcr    = pcr.readmap(landmask_pcr)
-    clone_data_pcr       = pcr.readmap(clone_pcr)
-    
+
     separator_1D = 0. # setting separator between 1-D and 2-D to 0 as only used for DFM
-    
+
     return dx, dy, DEM, bottom_lvl, H, waterDepth, rows, cols, \
-                list_x_coords, list_x_coords_2way, list_y_coords, list_y_coords_2way, coupledFPindices, coupledFPindices_2way, grid_dA, list_dA, SGCQin, separator_1D,\
-                cellarea_data_pcr, landmask_data_pcr, clone_data_pcr 
-    
+                list_x_coords, list_x_coords_2way, list_y_coords, list_y_coords_2way, coupledFPindices, coupledFPindices_2way, \
+                                                                                        grid_dA, list_dA, SGCQin, separator_1D
+
 # =============================================================================
-    
+
 def fillLFPgrid(model, indices_list, value_list, array_in, verbose_folder, verbose):
     """
-    Reshaping lists used for volumes coupling into array as used by LISFLOOD-LFP. 
-    
-    Input: 
+    Reshaping lists used for volumes coupling into array as used by LISFLOOD-LFP.
+
+    Input:
 		- indices list: list with index-pointers to coupled LFP-grids in array
         - value_list: list with values per coupled LFP-grid specified in indices_list
         - array_in: map with extent of model extend (e.g. DEM array)
-    Output: 
+    Output:
 		- array with dimension of LFP-domain, filled with values for coupled LFP-cells
-    """              
-    
+    """
+
     #- creating files based on model extent as specified by DEM array
     filled_map = np.zeros([len(array_in), len(array_in[0])])
     test_map = np.copy(filled_map)
@@ -272,27 +283,27 @@ def fillLFPgrid(model, indices_list, value_list, array_in, verbose_folder, verbo
     for i in range(len(indices_list)):
         test_map[indices_list[i]] = 1. #- creating boolean map to quickly assess output
         filled_map[indices_list[i]] = value_list[i]  #- filling in actual values from list
-        
+
     #- saving boolean map to verbose folder, if specified
     if (verbose == True) and (model.get_current_time() == 0.):
         print 'number of cells in filled LFP-grid that were filled', len((np.where(filled_map > 0.0))[1])
         fig = plt.figure()
         plt.imshow(test_map)
         plt.savefig(os.path.join(verbose_folder, 'filledGrid'+str(value_list)+'.png'))
-        plt.close(fig) 
+        plt.close(fig)
 
     return filled_map
-    
+
 # =============================================================================
 
 def activate2wayVariables(model_pcr, CoupledPCRcellIndices):
     """
     Activating several variables in PCR required to perfrom two-way coupling;
     also overwriting some with zeros to inactivate them
-    
+
     Note: if applying before 1st update, volume coupled to FM is way higher than without!
     """
-	
+
     # get variable/map from PCR
     new_preventRunoffToDischarge = model_pcr.get_var('preventRunoffToDischarge')
     new_controlDynamicFracWat = model_pcr.get_var('controlDynamicFracWat')
@@ -302,19 +313,19 @@ def activate2wayVariables(model_pcr, CoupledPCRcellIndices):
     new_preventRunoffToDischarge = set_values_in_array(new_preventRunoffToDischarge, CoupledPCRcellIndices, 0.)
     new_controlDynamicFracWat = set_values_in_array(new_controlDynamicFracWat, CoupledPCRcellIndices, 0.)
     new_waterBodyIdsAdjust = set_values_in_array(new_waterBodyIdsAdjust, CoupledPCRcellIndices, 0.)
-    
+
     model_pcr.set_var(('routing','preventRunoffToDischarge'), new_preventRunoffToDischarge)
     model_pcr.set_var(('routing','controlDynamicFracWat'), new_controlDynamicFracWat)
     model_pcr.set_var(('WaterBodies', 'waterBodyIdsAdjust'), new_waterBodyIdsAdjust)
-    
+
     return
-    
+
 # =============================================================================
 
 def determine_InundationArea_Hydrodynamics(model_type, model_hydr, CouplePCR2model_1way, CoupledPCRcellIndices_1way, CouplePCR2model_2way, CoupledPCRcellIndices_2way, threshold_inundated_depth, cellAreaSpherical_1way, cellAreaSpherical_2way, cellarea_data_pcr, landmask_pcr, missing_value_landmask):
 	"""
 	get total area of all flooded FM cells coupled to current PCR cell
-	
+
 	Input:
 	------
 	model type: 						define whether the hydrodynamic model is Delft3D Flexible Mesh ('DFM') or LISFLOOD-FP ('LFP')
@@ -322,18 +333,18 @@ def determine_InundationArea_Hydrodynamics(model_type, model_hydr, CouplePCR2mod
 	CouplePCR2model_2way:       		list of PCR cell indices with corresponding coupled 2D hydrodynamic cell indices
 	CoupledPCRcellIndices_2way: 		i,j indices of all PCR cells coupled to a 2D hydrodynamic cell
 	threshold_inundated_depth:			value defining the threshold when a hydrodynamic cell is considered to be flooded
-	cellAreaSpherical_2way:				list of spherical cell area per 2D hydrodynamic cell	
+	cellAreaSpherical_2way:				list of spherical cell area per 2D hydrodynamic cell
 	cellarea_data_pcr:					2d-array containing spherical cell area of PCR cells
 	landmask_pcr:						PCR landmask properties
 	missing_value_landmask:				value which is typically used in PCR landmask (mostly -255)
-	
+
 	Output:
 	-------
 	inundated_area_FM_2_PCR_coupled:	 list of aggregated inundated area of all hydrodynamic cells per corresponding coupled PCR cell
 	inundated_area_FM_2_PCR:			 2d-array containing inundated_area_FM_2_PCR_coupled information, to be used with BMI
 	inundated_fraction_FM_2_PCR_coupled: list of fractional cell area of each coupled PCR cell inundated by hydrodynamic cells
 	inundated_fraction_FM_2_PCR:		 2d-array containing inundated_fraction_FM_2_PCR_coupled information, to be used with BMI
-	
+
 	"""
 	# retrieve water depth of all hydrodynamic cells
 	if model_type == 'DFM':
@@ -341,64 +352,64 @@ def determine_InundationArea_Hydrodynamics(model_type, model_hydr, CouplePCR2mod
 	elif model_type == 'LFP':
 		current_water_depth = model_hydr.get_var('H')
 		current_water_depth = current_water_depth_fm.ravel()
-		
+
 	# initiate arrays, both for entire PCR extent to be used with BMI and for coupled PCR cells stored in list only
 	inundated_area_FM_2_PCR             = coupling_functions.zeroMapArray(landmask_pcr, missingValuesMap=missing_value_landmask)
 	inundated_area_FM_2_PCR_coupled     = np.zeros(len(CouplePCR2model_2way))
 	inundated_area_FM_2_PCR_coupled_1D  = np.zeros(len(CouplePCR2model_1way))
 	inundated_fraction_FM_2_PCR         = coupling_functions.zeroMapArray(landmask_pcr, missingValuesMap=missing_value_landmask)
 	inundated_fraction_FM_2_PCR_coupled = np.zeros(len(CouplePCR2model_2way))
-	
+
 	# loop over all PCR cells coupled to a 2D hydrodynamic cell
 	for i in range(len(CouplePCR2model_1way)):
-		
+
 		# get total area of all flooded hydrodynamic cells coupled to current PCR cell
 		# temporary variable for storing total area of flooded FM cells coupled to current PCR cell
 		temp_inundated_area_hydrodynamics = 0.
-		
+
 		# loop over all 1D hydrodynamic cells within PCR cell i
 		for j in range(len(CouplePCR2model_1way[i][1])):
-			
+
 			# get current FM cell index
 			current_hydrodynamic_cell_index = CouplePCR2model_1way[i][1][j]
-				
+
 			# if so, add cell area to temporary variable containing aggregated inundated area per PCR cell in m2
 			temp_inundated_area_hydrodynamics += cellAreaSpherical_1way[current_hydrodynamic_cell_index]
-				
+
 		# at end of loop, assign temporary variable to array storing inundated areas per PCR cell
 		inundated_area_FM_2_PCR_coupled_1D[i] = temp_inundated_area_hydrodynamics
-		
+
 	# loop over all PCR cells coupled to a 2D hydrodynamic cell
 	for k in range(len(CouplePCR2model_2way)):
-		
+
 		# get total area of all flooded hydrodynamic cells coupled to current PCR cell
 		# temporary variable for storing total area of flooded FM cells coupled to current PCR cell
 		temp_inundated_area_hydrodynamics = 0.
-		
+
 		# loop over all 2D hydrodynamic cells within PCR cell i
 		for l in range(len(CouplePCR2model_2way[k][1])):
-			
+
 			# get current FM cell index
 			current_hydrodynamic_cell_index = CouplePCR2model_2way[k][1][l]
-			
+
 			# check if water depth of current hydrodynamic cell exceeds threshold
 			if current_water_depth[current_hydrodynamic_cell_index] >= threshold_inundated_depth:
-				
+
 				# if so, add cell area to temporary variable containing aggregated inundated area per PCR cell in m2
 				temp_inundated_area_hydrodynamics += cellAreaSpherical_2way[current_hydrodynamic_cell_index]
-				
+
 		# at end of loop, assign temporary variable to array storing inundated areas per PCR cell
 		inundated_area_FM_2_PCR_coupled[k] = temp_inundated_area_hydrodynamics
-		
+
 		# assign value of current cell to zero array to be used with BMI
 		inundated_area_FM_2_PCR[CoupledPCRcellIndices_2way[k]] = inundated_area_FM_2_PCR_coupled[k]
-		
+
 		# divide total inuncated area of all hydrodynamics cells by corresponding PCR cell area to obtain flooded area fraction
-		inundated_fraction_FM_2_PCR_coupled[k] = inundated_area_FM_2_PCR_coupled[k] / cellarea_data_pcr[CoupledPCRcellIndices_2way[k]]     
-		                                                   
+		inundated_fraction_FM_2_PCR_coupled[k] = inundated_area_FM_2_PCR_coupled[k] / cellarea_data_pcr[CoupledPCRcellIndices_2way[k]]
+
 		# assign value of current cell to zero array to be used with BMI
 		inundated_fraction_FM_2_PCR[CoupledPCRcellIndices_2way[k]] = inundated_fraction_FM_2_PCR_coupled[k]
-	
+
 	return inundated_area_FM_2_PCR_coupled_1D, inundated_area_FM_2_PCR_coupled, inundated_area_FM_2_PCR, inundated_fraction_FM_2_PCR_coupled, inundated_fraction_FM_2_PCR
 
 # =============================================================================
@@ -406,7 +417,7 @@ def determine_InundationArea_Hydrodynamics(model_type, model_hydr, CouplePCR2mod
 def determine_InundationDepth_Hydrodynamics(model_type, model_hydr, landmask_pcr, missing_value_landmask, inundated_area_FM_2_PCR_coupled_1D, inundated_area_FM_2_PCR_coupled, CouplePCR2model_1way, CoupledPCRcellIndices_1way, CouplePCR2model_2way, CoupledPCRcellIndices_2way):
     """
     based on before calculated inundation area and retrieved inundation volume, the actual inundation depth per 2D hydrodynamic grid cell is calculated
-    
+
     Input:
     ------
     model type: 						define whether the hydrodynamic model is Delft3D Flexible Mesh ('DFM') or LISFLOOD-FP ('LFP')
@@ -419,14 +430,14 @@ def determine_InundationDepth_Hydrodynamics(model_type, model_hydr, landmask_pcr
 	CoupledPCRcellIndices_1way: 		i,j indices of all PCR cells coupled to a 1D hydrodynamic cell
 	CouplePCR2model_2way:       		list of PCR cell indices with corresponding coupled 2D hydrodynamic cell indices (floodplains)
 	CoupledPCRcellIndices_2way: 		i,j indices of all PCR cells coupled to a 2D hydrodynamic cell
-    
+
     Output:
     -------
     water_volume_FM_2_PCR_1D:			2d-array containing accumulated water volume information for all PCR cells coupled to channels, to be used with BMI
     water_depths_FM_2_PCR_1D:			2d-array containing cell averaged water depth information for all PCR cells coupled to channels, to be used with BMI
     water_volume_FM_2_PCR:				2d-array containing accumulated water volume information for all PCR cells coupled to floodplains, to be used with BMI
     water_depths_FM_2_PCR:				2d-array containing cell averaged water depth information for all PCR cells coupled to floodplains, to be used with BMI
-    
+
     """
     # retrieve or calculate water volume of all hydrodynamic cells cells (i.e. both 1D and 2D)
     if model_type == 'DFM':
@@ -434,7 +445,7 @@ def determine_InundationDepth_Hydrodynamics(model_type, model_hydr, landmask_pcr
     elif model_type == 'LFP':
 		current_volume_fm = model_hydr.get_var('H') * model_hydr.get_var('dA')
 		current_volume_fm = current_volume_fm.ravel()
-    
+
     # initializing arrays for filling in total volumes and water depths for each coupled PCR cell
     # for those coupled to channels
     water_volume_FM_2_PCR_coupled_1D = np.zeros(len(CouplePCR2model_1way))
@@ -442,7 +453,7 @@ def determine_InundationDepth_Hydrodynamics(model_type, model_hydr, landmask_pcr
     # for those coupled to floodplains
     water_volume_FM_2_PCR_coupled = np.zeros(len(CouplePCR2model_2way))
     water_depths_FM_2_PCR_coupled = np.zeros(len(CouplePCR2model_2way))
-	
+
     # create zero array of appropriate size for using BMI function 'set_var'
     # for those coupled back from channels
     water_depths_FM_2_PCR_1D = coupling_functions.zeroMapArray(landmask_pcr, missingValuesMap=missing_value_landmask)
@@ -450,49 +461,49 @@ def determine_InundationDepth_Hydrodynamics(model_type, model_hydr, landmask_pcr
     # for those coupled back from floodplains
     water_depths_FM_2_PCR = coupling_functions.zeroMapArray(landmask_pcr, missingValuesMap=missing_value_landmask)
     water_volume_FM_2_PCR = coupling_functions.zeroMapArray(landmask_pcr, missingValuesMap=missing_value_landmask)
-    
+
     # loop over all PCR cells coupled to hydrodynamic channels and fill in and/or calculate values
     for i in range(len(CouplePCR2model_1way)):
-		
+
 		# aggregate water volume of all hydrodynamic cells within corresponding PCR cell
 		water_volume_FM_2_PCR_coupled_1D[i] = np.sum(current_volume_fm[CouplePCR2model_1way[i][1]])
-		
+
 		# assign aggregated water volume to array to be later used with BMI
 		water_volume_FM_2_PCR_1D[CoupledPCRcellIndices_1way[i]] = water_volume_FM_2_PCR_coupled_1D[i]
-		
+
         # divide aggregated water volume per coupled PCR cell by aggregated DFM/LFP inundation area per coupled PCR cell to compute water depth per coupled PCR cell
 		if inundated_area_FM_2_PCR_coupled_1D[i] > 0. :
 			water_depths_FM_2_PCR_coupled_1D[i] = water_volume_FM_2_PCR_coupled_1D[i] / inundated_area_FM_2_PCR_coupled_1D[i]
-			
+
 		else:
 			water_depths_FM_2_PCR_coupled_1D[i] = 0.
-			
+
         # assign computed water depth to array to be later used with BMI
 		water_depths_FM_2_PCR_1D[CoupledPCRcellIndices_1way[i]] = water_depths_FM_2_PCR_coupled_1D[i]
-    
+
     # loop over all PCR cells coupled to hydrodynamic floodplains and fill in and/or calculate values
     for j in range(len(CouplePCR2model_2way)):
-		
+
 		# aggregate water volume of all hydrodynamic cells within corresponding PCR cell
 		water_volume_FM_2_PCR_coupled[j] = np.sum(current_volume_fm[CouplePCR2model_2way[j][1]])
-		
+
 		# assign aggregated water volume to array to be later used with BMI
 		water_volume_FM_2_PCR[CoupledPCRcellIndices_2way[j]] = water_volume_FM_2_PCR_coupled[j]
-		
+
         # divide aggregated water volume per coupled PCR cell by aggregated DFM/LFP inundation area per coupled PCR cell to compute water depth per coupled PCR cell
 		if inundated_area_FM_2_PCR_coupled[j] > 0. :
 			water_depths_FM_2_PCR_coupled[j] = water_volume_FM_2_PCR_coupled[j] / inundated_area_FM_2_PCR_coupled[j]
-			
+
 		else:
 			water_depths_FM_2_PCR_coupled[j] = 0.
-			
+
         # assign computed water depth to array to be later used with BMI
 		water_depths_FM_2_PCR[CoupledPCRcellIndices_2way[j]] = water_depths_FM_2_PCR_coupled[j]
 
-    return water_volume_FM_2_PCR_1D, water_depths_FM_2_PCR_1D, water_volume_FM_2_PCR, water_depths_FM_2_PCR  
-      
+    return water_volume_FM_2_PCR_1D, water_depths_FM_2_PCR_1D, water_volume_FM_2_PCR, water_depths_FM_2_PCR
+
 # =============================================================================
-    
+
 def noStorage(model_pcr, missing_value_pcr, CoupledPCRcellIndices, CouplePCR2model):
     """
     This is done to prevent the lakes/reservoirs in PCR from draining all at once,
@@ -500,80 +511,80 @@ def noStorage(model_pcr, missing_value_pcr, CoupledPCRcellIndices, CouplePCR2mod
     By means of this function, waterbody and channel storage in PCR-GLOBWB are removed
     for all coupled PCR-cells.
     """
-    
+
     # get required variables from PCR-GLOBWB
     current_channel_storage_pcr     = model_pcr.get_var('channelStorage')
     current_waterbody_storage_pcr   = model_pcr.get_var(('routing', 'waterBodyStorage'))
-    
-    # no channel storage    
+
+    # no channel storage
     new_channel_storage_pcr = set_values_in_array(current_channel_storage_pcr, CoupledPCRcellIndices, 0.)
     # # no waterbody storage
-    new_waterbody_storage_pcr = set_values_in_array(current_waterbody_storage_pcr, CoupledPCRcellIndices, 0.)    
+    new_waterbody_storage_pcr = set_values_in_array(current_waterbody_storage_pcr, CoupledPCRcellIndices, 0.)
 
     # activating coupling for relevant sections
     model_pcr.set_var(('grassland','ActivateCoupling'), 'True') #2way
     model_pcr.set_var(('forest','ActivateCoupling'), 'True') #2way
     model_pcr.set_var(('routing','ActivateCoupling'), 'True')
     model_pcr.set_var(('WaterBodies', 'ActivateCoupling'), 'True')
-    
+
     # overwriting variables with new values
     model_pcr.set_var('channelStorage', new_channel_storage_pcr, missing_value_pcr)
     model_pcr.set_var(('routing','waterBodyStorage'), new_waterbody_storage_pcr)
-    
+
     return
-    
+
 # =============================================================================
-    
+
 def updateHydrologicVariables(model_pcr, water_depths_floodplains_FM_2_PCR, inundated_fraction_floodplains_FM_2_PCR, new_channelStorage_pcr, couple_channel_storage):
     """
     This functions update inundation depth and fraction in the hydrologic models based on hydrodynamic results
-    
+
     Input:
     -----
     model_pcr:									BMI-adapter of coupled hydrologic model
     water_depths_floodplains_FM_2_PCR:			water depth [m] for all PCR cells coupled to 2-D floodplain cells
     inundated_fraction_floodplains_FM_2_PCR:	inundated fraction [-] of each PCR cell coupled to 2-D floodplain cells
     new_channelStorage_pcr:						2d-array with updated channel storage information (PCR cells coupled to 1-D channel cells)
-    
+
     Output:
     ------
     None
-    
+
     TODO: extend to paddy and nonPaddy landcover!!!
     """
 
     # add water from FM floodplains back to PCR
     model_pcr.set_var(('grassland','floodplainWaterLayer'), water_depths_floodplains_FM_2_PCR)
     model_pcr.set_var(('forest','floodplainWaterLayer'), water_depths_floodplains_FM_2_PCR)
-    
+
     # set the variable for dealing with floodplain inundated area fraction in PCR
     model_pcr.set_var(('grassland','inundatedFraction'), inundated_fraction_floodplains_FM_2_PCR)
     model_pcr.set_var(('forest','inundatedFraction'), inundated_fraction_floodplains_FM_2_PCR)
-    
+
     if couple_channel_storage == True:
         # add water from FM rivers back to PCR
         print '\nwater volume added to channelStorage in PCR %.2E' % np.sum(new_channelStorage_pcr)
         print ''
         model_pcr.set_var(('routing','channelStorage'), new_channelStorage_pcr)
-        
+
 #   # assuming this in not required anymore if RFS is implemented differently than in Arjen's version
 #	# could however still be implemented just that then it would be one array and not the fractions and in the worst case the fraction is 1 always?
 #
 #   # set the variable for dealing with river (water bodies) area fraction in PCR
 #   model_pcr.set_var(('routing','waterBodyFractionFM'), inundated_fraction_rivers_FM_2_PCR)
-    
+
     return
-    
+
 # =============================================================================
-    
+
 def noLDD(model_pcr, CoupledPCRcellIndices, verbose_folder, verbose):
     """
     The LDD of PCR needs to have 'pits' at all coupled cells to make sure that the routing is handled by DFM only.
     Adjusting the LDD to have a pit at every coupled cell (i.e. value 5), to make sure discharge values are not fed into DFM multiple times.
-    
+
     Input:
 		- List with  indices pointing to coupled PCR-cells
-    """    
+    """
     # retrieving current LDD map
     LDD_PCR_new = np.copy(model_pcr.get_var(('routing', 'lddMap')))
     # replace LDD values within the hydrodynamic model domain to 5 (pit cell)
@@ -586,7 +597,7 @@ def noLDD(model_pcr, CoupledPCRcellIndices, verbose_folder, verbose):
         plt.imshow(locCoupledPCRCells)
         plt.savefig(os.path.join(verbose_folder, 'locCoupledPCRCells.png'))
         plt.close(fig)
-        
+
     # overwriting current with new LDD information
     model_pcr.set_var(('routing', 'lddMap'), LDD_PCR_new, 255)
     return
@@ -598,21 +609,21 @@ def calculateDeltaVolumes(model_pcr, missing_value_pcr, secPerDay, CoupledPCRcel
     Calculating the delta volumes [m3/d] for all coupled PCR-cells as well as for those coupled to hydrodynamic channels only.
     For the feedback from DFM/LFP, the hydrodynamic model determines the amount of actual delta volume that can be added.
     To that end, the water volume already present in DFM/LFP is subtracted from the original delta volume.
-    
+
     Input:
     ------
     model_pcr:					BMI-adapter of coupled hydrologic model
     missing_value_pcr:			missing value of PCR maps (mostly -999)
     secPerDay:					86400
-    CoupledPCRcellIndices:		list of PCR cells coupled to a hydrodynamic channel	
+    CoupledPCRcellIndices:		list of PCR cells coupled to a hydrodynamic channel
 	cellarea_data_pcr:			2d-array of spherical cell area of all PCR cells
 	water_volume_FM_2_PCR:		2d-array of water volume in hydrodynamic cells per PCR cell
-        
+
     Output:
     -------
     delta_volume_PCR:			2d-array of delta volume [m3/day] to be used later with BMI
     delta_volume_PCR_coupled:	list of delta volume [m3/day] for all PCR cells coupled to a hydrodynamic channel
-    
+
     """
     #- update PCR for one time step (=1 day)
     model_pcr.update(1)
@@ -621,7 +632,7 @@ def calculateDeltaVolumes(model_pcr, missing_value_pcr, secPerDay, CoupledPCRcel
     current_discharge_pcr  = model_pcr.get_var('discharge')
     current_runoff_pcr     = model_pcr.get_var('landSurfaceRunoff')
 #    current_waterlayer_pcr = model_pcr.get_var('topWaterLayer') # do we really need this one? isn't that internally taken care of by PCR?
-    
+
     # Step 1: convert everything to m3/d and set missing values to zero
     water_volume_PCR_rivers = current_discharge_pcr * secPerDay
     water_volume_PCR_rivers[current_discharge_pcr==missing_value_pcr] = 0.
@@ -629,21 +640,21 @@ def calculateDeltaVolumes(model_pcr, missing_value_pcr, secPerDay, CoupledPCRcel
     water_volume_PCR_runoff[current_runoff_pcr==missing_value_pcr] = 0.
 #    water_volume_PCR_waterlayer = current_waterlayer_pcr * cellarea_data_pcr
 #    water_volume_PCR_waterlayer[current_waterlayer_pcr==missing_value_pcr] = 0.
-    
+
     # Step 2: deterime total input volume from PCR-GLOBWB that should be present at this time step
     water_volume_PCR_total_in = water_volume_PCR_rivers + water_volume_PCR_runoff #+ water_volume_PCR_waterlayer
     print '\ndelta volume of all PCR cells before feedback from DFM: %.2E' % np.sum(water_volume_PCR_total_in)
-    
+
     # Step 3: remove water volume already present in PCR-GLOBWB from previous time step to obtain delta volume
     delta_volume_PCR = water_volume_PCR_total_in - water_volume_FM_2_PCR
     print 'feedback volume from FM: %.2E ' % np.sum(water_volume_FM_2_PCR)
     print 'delta volume of all PCR cells after feedback from FM: %.2E' % np.sum(delta_volume_PCR)
     print 'reduction by ', np.round((1-(np.sum(delta_volume_PCR) / np.sum(water_volume_PCR_total_in)))*100., 2), '%'
-       
+
     # Step 4: clip to coupled PCR-GLOBWB cells only
     delta_volume_PCR_coupled = delta_volume_PCR[zip(*CoupledPCRcellIndices)]
     print 'delta volume for PCR cells coupled to hydrodynamic channels only %.2E' % np.sum(delta_volume_PCR_coupled)
-    
+
     #if np.round(np.sum(water_volume_PCR_total_in[zip(*CoupledPCRcellIndices)]) - np.sum(water_volume_FM_2_PCR[zip(*CoupledPCRcellIndices)]), decimals=-6) != np.round(np.sum(delta_volume_PCR_coupled), decimals=-6):
     if ((np.sum(water_volume_PCR_total_in[zip(*CoupledPCRcellIndices)]) - np.sum(water_volume_FM_2_PCR[zip(*CoupledPCRcellIndices)])) / np.sum(delta_volume_PCR_coupled) < 0.95) or \
 			((np.sum(water_volume_PCR_total_in[zip(*CoupledPCRcellIndices)]) - np.sum(water_volume_FM_2_PCR[zip(*CoupledPCRcellIndices)])) / np.sum(delta_volume_PCR_coupled) > 1.05):
@@ -652,7 +663,7 @@ def calculateDeltaVolumes(model_pcr, missing_value_pcr, secPerDay, CoupledPCRcel
 		sys.exit('\nERROR: water balance in calculating delta volume not accurate!\n')
 
     return delta_volume_PCR, delta_volume_PCR_coupled
-    
+
 # =============================================================================
 
 def calculateDeltaWater(model_hydr, CoupleModel2PCR, CouplePCR2model, delta_volume_PCR_coupled, cellAreaSpherical_1way, fraction_timestep, model_type, useFluxes):
@@ -662,7 +673,7 @@ def calculateDeltaWater(model_hydr, CoupleModel2PCR, CouplePCR2model, delta_volu
     When fluxes are used, daily volumes are simply translated to averaged flux of m3/s per day.
     When states are used, daily volumes are first divided by the cell area of each coupled hydrodynamic cell, and then divided by the
     user-specified timestep, if provided.
-    
+
     Input:
         - delta volumes
         - cell areas
@@ -671,131 +682,131 @@ def calculateDeltaWater(model_hydr, CoupleModel2PCR, CouplePCR2model, delta_volu
         - delta state [m/d] or [m/timestep]
         - delta flux [m3/s]
     """
-    
-    #- creating zero arrays to be populated with data    
+
+    #- creating zero arrays to be populated with data
     additional_water_level = np.zeros(len(CoupleModel2PCR))
     additional_water_volume = np.zeros(len(CoupleModel2PCR))
     verbose_volume = np.zeros(len(CoupleModel2PCR))
 
     # loop over all coupled PCR cells
     for i in range(len(CouplePCR2model)):
-        
+
         # check if delta volume is positive
         if delta_volume_PCR_coupled[i] >= 0.:
-				
+
             # divided volume by number of hydrodynamic cells in each PCR-cell
             temp_water_volume = delta_volume_PCR_coupled[i] / len(CouplePCR2model[i][1])
-            
+
             # at each PCR-cell...
             for j in range(len(CouplePCR2model[i][1])):
-                
+
                 # ...get current hydrodynamic-cell index
                 current_cell_index = CouplePCR2model[i][1][j]
-                   
+
                 # ...calculate additional water levels [m/day] for current index
                 additional_water_level[current_cell_index] = temp_water_volume / cellAreaSpherical_1way[current_cell_index]
-                		
+
 		# ...calculate additional water volume [m3/day] for current index
                 additional_water_volume[current_cell_index] = temp_water_volume  / 1.
-						
+
                 verbose_volume[current_cell_index] = temp_water_volume  / 1.
-                    
+
         elif delta_volume_PCR_coupled[i] < 0.:
 			os.sys.exit('\n>>> delta volume should not be negative anymore!<<<\n')
 
     # calculate additional water levels or fluxes based on chosen settings
     if (useFluxes == False) and (model_type == 'DFM'):
         delta_water = additional_water_level / fraction_timestep        # [m/timestep]
-        
+
     elif (useFluxes == False) and (model_type == 'LFP'):
         delta_water = np.copy(additional_water_level)                   # [m/day]
-   
-    elif (useFluxes == True) and (model_type == 'DFM'):              
+
+    elif (useFluxes == True) and (model_type == 'DFM'):
         delta_water = additional_water_level * 1000.                    # [mm/day]
-        
-    elif (useFluxes == True) and (model_type == 'LFP'):              
+
+    elif (useFluxes == True) and (model_type == 'LFP'):
         delta_water = additional_water_volume / 86400.                  # [m3/s]
-        
+
     return delta_water, verbose_volume
-    
+
 # =============================================================================
-    
+
 def updateModel(model, delta_water, update_step, separator, useFluxes, use_RFS, model_type, verbose):
     """
     Calculating the new water depth based on current depth and previously computed delta water depth (see calculateDeltaWater).
     Returning the new water depth to the hydrodynamic model and updating it according with user-specified time step.
     Alternatively, additional water input can be provided using fluxes.
-    
+
     NOTE: For coupling with LFP, updating the model is done outside this function.
-    NOTE: For coupling wiht LFP, it is generally recommended to use fluxes to avoid instabilites and increase computational speed. 
-    
+    NOTE: For coupling wiht LFP, it is generally recommended to use fluxes to avoid instabilites and increase computational speed.
+
     Input:
 		- delta_water: list or array with states or fluxes for all coupled DFM- or LFP-cells
 		- update_step: user-specified update step (only for DFM applicable)
     Output:
 		- check_array_in: can be used to assess whether delta_volumes and delta_water are correctly set into hydrodynamic model
     """
-    
+
     if useFluxes == False:
-		
+
         if model_type == 'DFM':
-			
+
             # get current water level in DFM
             current_water_levels = np.copy(model.get_var('s1'))
-            
+
             if use_RFS == True:
 				current_water_levels_2d = current_water_levels[:separator]
-				current_water_levels = current_water_levels[separator:]            
-			      
+				current_water_levels = current_water_levels[separator:]
+
             # create empty array for filling in values
             new_water_levels = np.zeros(len(current_water_levels))
-    
+
             # loop over all DFM-cells
             for i in range(len(new_water_levels)):
-				
+
                 # if at "known" cells:
                 if i < len(delta_water):
                     new_water_levels[i] = current_water_levels[i] + delta_water[i]
                 # for cells outside the range of "known" cells (e.g. 1D channels):
                 else:
                     new_water_levels[i] = current_water_levels[i]
-            
+
             if use_RFS == True:
 				new_water_levels = np.append(current_water_levels_2d , new_water_levels)
-            
+
             # overwriting current with new water levels
             model.set_var('s1', new_water_levels)
-            
+
             # compute output array
             check_array_in = model.get_var('s1')[separator:] - current_water_levels
-            
+
             # update DFM with user-specified timestep
             model.update(update_step)
-                    
+
         elif model_type == 'LFP':
-			
+
 			# get current water level in LFP
             current_water_levels = np.copy(model.get_var('H'))
-            
+
             # create empty array for filling in values
             new_water_levels = np.zeros([len(current_water_levels), len(current_water_levels[0])])
-            
+
             # compute new water levels
             new_water_levels = current_water_levels + delta_water
-			
+
             # overwriting current with new water levels
-            model.get_var('H')[:] = new_water_levels 
-            
+            model.get_var('H')[:] = new_water_levels
+
     elif useFluxes == True:
 
-        if model_type == 'DFM': 
-                    
+        if model_type == 'DFM':
+
             # creating zero-array for 2D part
             zeroValuesFor2D  = np.zeros(len(model.get_var('flowelemnode')))
-            
+
             # resetting rain-array to zero before every update (otherwise it's added!)
             model.get_var('rain')[:] = np.zeros(len(model.get_var('rain')))
-            
+
             # creating array combined of 2D and 1D part
             if use_RFS == True:
 				delta_water = np.append(zeroValuesFor2D, delta_water)
@@ -805,41 +816,41 @@ def updateModel(model, delta_water, update_step, separator, useFluxes, use_RFS, 
                 model.get_var('rain')[:] = delta_water
             elif use_RFS == False:
                 model.get_var('rain')[:len(model.get_var('flowelemnode'))] = delta_water
-            
+
             # updating model for one day
             model.update(86400.)
-            
+
         elif model_type == 'LFP':
-                        
+
             # overwriting current with new subgrid inflow discharge
             model.get_var('SGCQin')[:] = delta_water
 
     return
-    
-# =============================================================================  
+
+# =============================================================================
 
 def checkLocationCoupledPCRcells(model_pcr, CoupledPCRcellIndices):
     """
     This is mainly a debug-function to check whether PCR-cells are corretly coupled.
-    
+
     Output:
-		- boolean map that allows to assess the locations of the coupled PCR-GLOBWB cells.    
-    """              
-    
+		- boolean map that allows to assess the locations of the coupled PCR-GLOBWB cells.
+    """
+
     # retrieving array representing PCR-GLOBWB data extent
     shapemap = np.copy(model_pcr.get_var(('routing', 'lddMap')))
-    
-    # creating empty array with PCR-GLOBWB extent 
+
+    # creating empty array with PCR-GLOBWB extent
     check_map = np.zeros([len(shapemap), len(shapemap[0])])
 
     # assigning True value for all coupled PCR-GLOBWB cells
     for i in range(len(CoupledPCRcellIndices)):
-        check_map[CoupledPCRcellIndices[i]] = 1.    
+        check_map[CoupledPCRcellIndices[i]] = 1.
 
     return check_map
-    
-# ============================================================================= 
-    
+
+# =============================================================================
+
 def adjust_iniGR(model_pcr, GW_recharge_pcr, CoupledPCRcellIndices_2way, adjust_initial_groundwater):
 	"""
 	has to be done only before first update starts!
@@ -865,62 +876,62 @@ def adjust_iniGR(model_pcr, GW_recharge_pcr, CoupledPCRcellIndices_2way, adjust_
 		model_pcr.set_var('storGroundwater', GW_new_storage)
 	else:
 		print '\n>>> initial groundwater properties not adjusted<<<\n'
-	
+
 	return
-	
+
 # =============================================================================
 
 def activate_floodplain_infiltration_factor(model_pcr, CoupledPCRcellIndices, use_floodplain_infiltration_factor):
 	"""
 	has to be done only before first update starts!
 	"""
-	
+
     # obtain default scaling factor
 	new_controlFloodplainFactor = np.copy(model_pcr.get_var(('forest','controlFloodplainFactor')))
-	
+
     # check if floodplain scaling factor is to be activated
 	if use_floodplain_infiltration_factor == True:
-		
+
 	    # assign zero value to coupled PCR cells with FM river cells
 		for i in range(len(CoupledPCRcellIndices)):
 			if boolean_river_cell_in_coupled_PCR_cell[i]:
 				new_controlFloodplainFactor[CoupledPCRcellIndices[i]] = 0.
-				
+
 		print '\n>>> using floodplain scaling factor <<<\n'
-        
+
 		# activate the scaling factor functions
 		model_pcr.set_var(('forest','ActivateFactorInfiltrationFloodplain'), 'True')
 		model_pcr.set_var(('grassland','ActivateFactorInfiltrationFloodplain'), 'True')
-        
+
         # set the variable controlling the floodplain infiltration scaling factor
 		model_pcr.set_var(('forest','controlFloodplainFactor'), new_controlFloodplainFactor)
 		model_pcr.set_var(('grassland','controlFloodplainFactor'), new_controlFloodplainFactor)
-	
+
 	else:
-		
+
 		print '\n>>> not using floodplain scaling factor <<<\n'
-		
-	return 
+
+	return
 
 # =============================================================================
 
 def determine_new_channelStoragePCR(model_pcr, landmask_pcr, missing_value_landmask, water_volume_FM_2_PCR):
 	"""
 	couples back the aggregated water volume of each hydrodynamic channel cell to the channel storage in PCR
-	
+
 	Input:
 	------
 	model_pcr:				BMI-adapter of hydrologic model
 	landmask_pcr:			PCR landmask properties
 	missing_value_landmask:	value which is typically used in PCR landmask (mostly -255)
 	water_volume_FM_2_PCR:	2d-array containing accumulated water volume information for all PCR cells coupled to channels (see function 'determine_InundationDepth_Hydrodynamics')
-	
+
 	Output:
 	-------
 	new_channel_storage:	2d-array with updated channel storage information
-	
+
 	"""
-	
+
 	current_channelStorage_pcr  = model_pcr.get_var(('routing','channelStorage'))
 
 	new_channelStorage_pcr = coupling_functions.zeroMapArray(landmask_pcr, missingValuesMap=missing_value_landmask)
@@ -930,29 +941,29 @@ def determine_new_channelStoragePCR(model_pcr, landmask_pcr, missing_value_landm
 			if current_channelStorage_pcr[i][j] != -999:
 #				new_channelStorage_pcr[i][j] = current_channelStorage_pcr[i][j] + water_volume_FM_2_PCR[i][j] # OLD, as used by Arjen
 				new_channelStorage_pcr[i][j] = water_volume_FM_2_PCR[i][j]
-            
+
 	return new_channelStorage_pcr
-	
+
 # =============================================================================
 """
 This function sets the topWaterLayer of PCR-GLOBWB to zero (or another user-specified value) for all cells specified by the (row, column) index list
 """
 
 def set_zeroTopWaterlayer(model_pcr, CoupledPCRcellIndices, value=0.):
-	
+
 	new_tWL_forest = model_pcr.get_var(('forest','topWaterLayer'))
 	new_tWL_grassland = model_pcr.get_var(('grassland','topWaterLayer'))
-	
+
 	new_tWL_forest = set_values_in_array(new_tWL_forest, CoupledPCRcellIndices, value)
 	new_tWL_grassland = set_values_in_array(new_tWL_grassland, CoupledPCRcellIndices, value)
-	
+
 	model_pcr.set_var(('forest','topWaterLayer'), new_tWL_forest)
 	model_pcr.set_var(('grassland','topWaterLayer'), new_tWL_grassland)
-	
+
 	return
-	
+
 # =============================================================================
-	
+
 def account4negativeDeltaVolumes(model_hydr, model_type, CoupledPCRcellIndices, CoupledPCRcellIndices_2way, CouplePCR2model_2way, delta_volume_PCR_2d, cellAreaSpherical):
 	"""
 	While water depth will need to differ between hydrology and hydrodynamics (due to differences in grid size), the volumes of a PCR cell and all hydrodynamic cells in between should match.
@@ -960,41 +971,41 @@ def account4negativeDeltaVolumes(model_hydr, model_type, CoupledPCRcellIndices, 
 	If PCR predicts higher volumes than in DFM/LFP, the volume in DFM/LFP will be raised accordingly.
 	If PCR predicts lower volumes than in DFM/LFP, then the volumes in DFM/LFP will have to be reduced.
 	This requires the alignment of water levels in DFM/LFP according to the reduction of volume.
-	
+
 	Input:
 	-----
 	model_hydr: 					BMI adapter of hydrodynamic model
 	model_type: 					either DFM or LFP
 	CoupledPCRcellIndices: 			list of PCR-cell entries coupled to 1d channel cells (for coupling to DFM/LFP)
 	CoupledPCRcellIndices_2way:		list of PCR-cell entries coupled to 2d floodplain cells (for feedback from DFM/LFP)
-	
-	
+
+
 	Output:
 	------
 	asdf
-	
+
 	TO DO: we are now implying that hydrodynamics have to be adapted according to the hydrologic prediction. But isn't it possible to make it the other way?
-	
+
 	"""
-	
+
 	# converting 2d-array of delta volume of all PCR cells to a list with all entries coupled to 2d hydrodynamic floodplain cells
 	delta_volume_PCR_ini = delta_volume_PCR_2d[zip(*CoupledPCRcellIndices_2way)]
-	
+
 	# copying array to faciliate comparison later on
 	delta_volume_PCR_positiveOnly = np.copy(delta_volume_PCR_ini)
-	
+
 	# printing the total delta volume for all PCR cells coupled to a 2-D hydrodynamic cell
 	print '\ndelta volume for 2way-coupled cells before accounting %.2E' % np.sum(delta_volume_PCR_ini)
-	
+
 	# printing total number of PCR cells that have a negative delta volume for the current time step
 	print 'number cells with negative volume before accounting ', len(np.where(delta_volume_PCR_ini < 0.)[0])
-	
-	# writing all those entries to a list 
+
+	# writing all those entries to a list
 	negative_entries = np.where(delta_volume_PCR_ini < 0.)[0]
 	indices_PCRcells_negativeDeltaVolume = []
 	for q in xrange(len(negative_entries)):
 		indices_PCRcells_negativeDeltaVolume.append(negative_entries[q])
-		
+
 	# printing the entry number of those PCR cells with a negative delta volume
 	print 'entries of cells with negative volume before accounting ', indices_PCRcells_negativeDeltaVolume
 	print ''
@@ -1006,48 +1017,48 @@ def account4negativeDeltaVolumes(model_hydr, model_type, CoupledPCRcellIndices, 
 	elif model_type == 'LFP':
 		water_height = model_hydr.get_var('H')
 		water_height = water_height.ravel()
-			
+
 	# loop over all coupled PCR cells coupled to a 2-D hydrodynamic floodplain cell
 	for i in range(len(CouplePCR2model_2way)):
-		
+
 		# if it's positive, that's fine and no accounting has to take place
 		if delta_volume_PCR_ini[i] >= 0.:
-			pass 
-	    
+			pass
+
 		# if it's negative, there is too much water in hydraulics compared to hdyrology and thus volume needs to be removed and water levels aligned
 		elif delta_volume_PCR_ini[i] < 0.:
-			
+
 			print '\n>>> accounting for negative volumes required for PCR cell', str(i),'<<<\n'
-			 
+
 	        # retrieving the negative volume of the current PCR cell under consideration
 			remaining_negative_delta_volume = delta_volume_PCR_ini[i]
-			
+
 			# printing the PCR entry number as well as the associated negative delta volume
 			print '\nremaining negative delta volume is %.2E' % np.absolute(remaining_negative_delta_volume)
-	
+
 	        # get all coupled 2-D hydrodynamic cells of the current PCR cell under consideration
 			current_model_cell_indices = CouplePCR2model_2way[i][1]
-			
+
 			# printing the total number of 2-D hydrodynamic cells
 			print '\nhydrodynamic cells are ', len(current_model_cell_indices)
 
 	        # get current water levels/depths of these cells
 			current_water_height = water_height[current_model_cell_indices]
-		
+
 	        # set variable for tracking water depths
 			new_water_depth = np.copy(current_water_height)
-	
+
 	        # while there is negative delta volume, remove water from wet cells to align reduction volume with reduction water level
 			while remaining_negative_delta_volume < 0:
-                
+
                 # find remaining wet cells
                 # indices within PCR cell
 				remaining_wet_cells_temp_indices  = np.where(new_water_depth > 0.)[0]
-							
+
 				# indices with respect to all hydrodynamic cell indices
 				remaining_wet_cells_total_indices = current_model_cell_indices[remaining_wet_cells_temp_indices]
 				print 'remaining WET hydrodyn. cells are ', len(remaining_wet_cells_total_indices ), 'from in total ',len(current_model_cell_indices),'cells'
-                
+
                 # if no remaining wet cells are found, no more water can be removed and the while-loop should stop
                 # this probably means that the remaining delta volume is very low (but just not yet 0)
 				if len(remaining_wet_cells_temp_indices) != 0:
@@ -1055,98 +1066,98 @@ def account4negativeDeltaVolumes(model_hydr, model_type, CoupledPCRcellIndices, 
 				else:
 					print 'no remaining wet cell indices, break loop here and return'
 					break
-                
+
                 # find cell with least amount of water
 				min_water_depth_value = np.min(new_water_depth[remaining_wet_cells_temp_indices])
 				min_water_depth_index = np.argmin(new_water_depth[remaining_wet_cells_temp_indices])
-                
+
                 # calculate the total volume that is about to be removed
 				total_volume_about_to_be_removed = np.sum(min_water_depth_value  * cellAreaSpherical[remaining_wet_cells_total_indices])
 				print '\n total to be removed from WET hydrodyn. cells %.2E' % total_volume_about_to_be_removed
 
                 # check if removing this from all wet cells will not exceed the remaining 'delta volume'
 				if (-1 * remaining_negative_delta_volume) > total_volume_about_to_be_removed:
-                    
+
                     # remove water from all wet cells, i.e. water heigth of all cells is uniformly reduced by value of minimum water height before reduction
 					new_water_depth[remaining_wet_cells_temp_indices] -= min_water_depth_value
-                    
+
                     # remove corresponding volume from remaining 'delta volume'
 					remaining_negative_delta_volume += total_volume_about_to_be_removed
-					
+
 					print '\nnew negative delta volume is now %.2E' % np.absolute(remaining_negative_delta_volume)
-                    
+
                 # or, if volume to be removed would exceed 'delta volume', remove less than this instead
 				else:
-					
+
 					print '\ntotal volume to be removed EXCEEDS remaining negative volume because...'
 					print '...negative delta volume is only %.2E' % np.absolute(remaining_negative_delta_volume)
 					print 'and volume to be removed is %.2E' % total_volume_about_to_be_removed
-                    
+
                     # calculate additional water depths to be removed from all wet cells to reach remaining delta volume
 					remove_water_depths_extra = (remaining_negative_delta_volume/len(remaining_wet_cells_temp_indices)) / cellAreaSpherical[remaining_wet_cells_total_indices]
 
                     # remove water from all wet cells
 					new_water_depth[remaining_wet_cells_temp_indices] += remove_water_depths_extra
-                    
+
                     # check if there are negative water depths, and if so, repeat process
                     # -------------------------------------------------------------------
 					while any(new_water_depth < 0):
-						
+
 						print '\nATTENTION: there are hydrodynamic cells with NEGATIVE WATER DEPTHS'
 						print 'at locations ', np.where(new_water_depth < 0)
-						                    
+
                         # reset negative water depths to zero and count the 'missing' volume
 						temp_vol_was_negative = 0
-						
+
 						#search for entries where new_water_depth is negative
 						for k in range(len(new_water_depth)):
-							
+
 							if new_water_depth[k] < 0:
-								
+
 								# computing volume per cell with negative water depth
 								temp_vol_was_negative -= (new_water_depth[k] * -1) * cellAreaSpherical[current_model_cell_indices[k]]
-								
+
 								# instead of negative depth, add 0 m as depth, i.e. dry cell
 								new_water_depth[k] = 0.
-                                
+
                         # this represents the volume that is being 'added back' to the delta volume to then be removed again from wet cells
 						remaining_negative_delta_volume = temp_vol_was_negative
-                        
+
                         # find remaining wet cells
 						remaining_wet_cells_temp_indices  = np.where(new_water_depth> 0.)[0]
 						remaining_wet_cells_total_indices = current_model_cell_indices[remaining_wet_cells_temp_indices]
-                        
+
                         # calculate additional water depths to be removed from all wet cells to reach remaining delta volume
 						remove_water_depths_extra = (remaining_negative_delta_volume/len(remaining_wet_cells_temp_indices)) / cellAreaSpherical[remaining_wet_cells_total_indices]
-                            
+
                         # remove water from all wet cells
 						new_water_depth[remaining_wet_cells_temp_indices] += remove_water_depths_extra
                     # -------------------------------------------------------------------
-                    
+
 					print 'CHECK: no hydrodynamic cells with negative water depths found'
 					print 'at locations ', np.where(new_water_depth < 0)
-                    
+
                     # set 'delta volume' to zero (so while-loop will en
-					remaining_negative_delta_volume = 0. 
-					
+					remaining_negative_delta_volume = 0.
+
 			# also, set delta volume at this entry to zero for later use in other functions
 			# i.e. if delta volume was positive, it is added later to DFM/LFP volume
 			# if delta volume was negative, no water is added but water height is reduced such that water volume DFM/LFP is decreased
 			delta_volume_PCR_positiveOnly[i] = 0.
-	
+
 			if (model_type == 'DFM') and (len(current_model_cell_indices) == len(new_water_depth)):
-				
+
 				new_water_depth = model_hydr.get_var('bl')[current_model_cell_indices] + new_water_depth
 				model_hydr.set_var('s1', new_water_depth)
-				
+
 			elif model_type == 'LFP':
-				
+
 				model_hydr.get_var('H')[:] = new_water_depth
-				
+
 	# reshape the list to an array with shape of PCR map
 	delta_volume_PCR_positiveOnly_2d = fillLFPgrid(model_hydr, CoupledPCRcellIndices_2way, delta_volume_PCR_positiveOnly, delta_volume_PCR_2d, verbose_folder=None, verbose=False)
-	
-	# converting array with PCR map dimensions to list containing only those entries coupled to a 1-D hydrodynamic cell 
+
+	# converting array with PCR map dimensions to list containing only those entries coupled to a 1-D hydrodynamic cell
 	delta_volume_PCR_coupled_positiveOnly = delta_volume_PCR_positiveOnly_2d[zip(*CoupledPCRcellIndices)]
-			
+
 	return delta_volume_PCR_positiveOnly, delta_volume_PCR_coupled_positiveOnly
