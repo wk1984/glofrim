@@ -324,7 +324,7 @@ model_functions.activate_floodplain_infiltration_factor(hydrologicModel, coupled
 #a = datetime.datetime(1984,01,01)
 #b = a.strftime('%Y-%m-%d') 
 #hydrologicModel.get_start_time = b
-#print hydrologicModel.get_start_time
+#print hydrologicModel.get_start_time #works for BMI function, but doesn't add info to other PCR functions
 
 # -------------------------------------------------------------------------------------------------
 # CALCULATE DELTA VOLUMES (DAY 1)
