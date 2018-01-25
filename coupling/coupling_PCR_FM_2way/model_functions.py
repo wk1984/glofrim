@@ -173,7 +173,7 @@ def extractModelData_DFM(model, useRFS, use_2way):
     elif use_2way == False:
         modelCoords_2way = []
 
-    return x_coords, y_coords, z_coords, bottom_lvl, cell_points_fm, separator, cellAreaSpherical_1way, cellAreaSpherical_2way, \
+    return bottom_lvl, cell_points_fm, separator, cellAreaSpherical_1way, cellAreaSpherical_2way, \
                                                                             xz_coords, yz_coords, modelCoords, modelCoords_2way
 
 # =============================================================================
@@ -346,7 +346,7 @@ def determine_InundationArea_Hydrodynamics(model_type, model_hydr, CouplePCR2mod
 	inundated_fraction_FM_2_PCR:		 2d-array containing inundated_fraction_FM_2_PCR_coupled information, to be used with BMI
 
 	"""
-	# retrieve water depth of all hydrodynamic cells
+	# retrieve water depth of all hydrodynamic cells as list
 	if model_type == 'DFM':
 		current_water_depth = model_hydr.get_var('s1') - model_hydr.get_var('bl')
 	elif model_type == 'LFP':
@@ -435,20 +435,22 @@ def determine_InundationDepth_Hydrodynamics(model_type, model_hydr, landmask_pcr
     Output:
     -------
     water_volume_FM_2_PCR_1D:			2d-array containing accumulated water volume information for all PCR cells coupled to channels, to be used with BMI
+    water_depths_FM_2_PCR_1D:			2d-array containing accumulated water volume information for all PCR cells coupled to channels, to be used with BMI
     water_volume_FM_2_PCR:				2d-array containing accumulated water volume information for all PCR cells coupled to floodplains, to be used with BMI
     water_depths_FM_2_PCR:				2d-array containing cell averaged water depth information for all PCR cells coupled to floodplains, to be used with BMI
 
     """
     # retrieve or calculate water volume of all hydrodynamic cells cells (i.e. both 1D and 2D)
     if model_type == 'DFM':
-        current_volume_fm = np.copy(model_hydr.get_var('vol1'))
+        currentVolume_HDYN = np.copy(model_hydr.get_var('vol1'))
     elif model_type == 'LFP':
-		current_volume_fm = model_hydr.get_var('H') * model_hydr.get_var('dA')
-		current_volume_fm = current_volume_fm.ravel()
+		currentVolume_HDYN = model_hydr.get_var('H') * model_hydr.get_var('dA')
+		currentVolume_HDYN = currentVolume_HDYN.ravel()
 
     # initializing arrays for filling in total volumes and water depths for each coupled PCR cell
     # for those coupled to channels
     water_volume_FM_2_PCR_coupled_1D = np.zeros(len(CouplePCR2model_1way))
+    water_depths_FM_2_PCR_coupled_1D = np.zeros(len(CouplePCR2model_1way))
     # for those coupled to floodplains
     water_volume_FM_2_PCR_coupled = np.zeros(len(CouplePCR2model_2way))
     water_depths_FM_2_PCR_coupled = np.zeros(len(CouplePCR2model_2way))
@@ -456,15 +458,16 @@ def determine_InundationDepth_Hydrodynamics(model_type, model_hydr, landmask_pcr
     # create zero array of appropriate size for using BMI function 'set_var'
     # for those coupled back from channels
     water_volume_FM_2_PCR_1D = coupling_functions.zeroMapArray(landmask_pcr, missingValuesMap=missing_value_landmask)
+    water_depths_FM_2_PCR_1D = coupling_functions.zeroMapArray(landmask_pcr, missingValuesMap=missing_value_landmask)
     # for those coupled back from floodplains
-    water_depths_FM_2_PCR = coupling_functions.zeroMapArray(landmask_pcr, missingValuesMap=missing_value_landmask)
     water_volume_FM_2_PCR = coupling_functions.zeroMapArray(landmask_pcr, missingValuesMap=missing_value_landmask)
+    water_depths_FM_2_PCR = coupling_functions.zeroMapArray(landmask_pcr, missingValuesMap=missing_value_landmask)
 
     # loop over all PCR cells coupled to hydrodynamic channels and fill in and/or calculate values
     for i in range(len(CouplePCR2model_1way)):
 
 		# aggregate water volume of all hydrodynamic cells within corresponding PCR cell
-		water_volume_FM_2_PCR_coupled_1D[i] = np.sum(current_volume_fm[CouplePCR2model_1way[i][1]])
+		water_volume_FM_2_PCR_coupled_1D[i] = np.sum(currentVolume_HDYN[CouplePCR2model_1way[i][1]])
 
 		# assign aggregated water volume to array to be later used with BMI
 		water_volume_FM_2_PCR_1D[CoupledPCRcellIndices_1way[i]] = water_volume_FM_2_PCR_coupled_1D[i]
@@ -473,7 +476,7 @@ def determine_InundationDepth_Hydrodynamics(model_type, model_hydr, landmask_pcr
     for j in range(len(CouplePCR2model_2way)):
 
 		# aggregate water volume of all hydrodynamic cells within corresponding PCR cell
-		water_volume_FM_2_PCR_coupled[j] = np.sum(current_volume_fm[CouplePCR2model_2way[j][1]])
+		water_volume_FM_2_PCR_coupled[j] = np.sum(currentVolume_HDYN[CouplePCR2model_2way[j][1]])
 
 		# assign aggregated water volume to array to be later used with BMI
 		water_volume_FM_2_PCR[CoupledPCRcellIndices_2way[j]] = water_volume_FM_2_PCR_coupled[j]

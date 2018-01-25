@@ -1,0 +1,35 @@
+[model_type]
+# either "DFM" for Delft3D Flexible Mesh or "LFP" for Lisflood-FP v5.9
+model_type = DFM
+
+[model_settings]
+# path where either mdu- or par-file is located
+model_dir       = /path/to/mdu/or/par/file/
+# either mdu- or par-file
+model_file      = someFile.mdu/par
+# needs only to be specified if model is not in spherical coordinates
+model_projection = epsg:32720
+
+[PCR_settings]
+# PCR-GLOBWB ini-file
+config_pcr = /path/to/pcrglobwb/iniFile/filename.ini
+
+[general_settings]
+# specify whether to apply 2way coupling or not (then: 1way coupling only)
+2way coupling 		= True
+# specify whether hydrodynamic model is in lat/lon system
+latlon 		= True
+# specify model forcing (when False, states [m] are used; when True, fluxes [m3/timeUnit])
+use_Fluxes 	= True
+# specify to use river-floodplain-scheme (RFS)
+use_RFS 	= True
+# specify verbosemode
+verbose 	= False
+
+[numerical_settings]
+# specify model timesteps
+number_of_timesteps = 2556
+# [seconds], only applicable if model_type=DFM and use_Fluxes=False
+update_step = 1800
+# set threshold [m] above which a cell is considered 'inundated'
+threshold_inundated_depth = 0.05

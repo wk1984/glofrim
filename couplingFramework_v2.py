@@ -1,3 +1,4 @@
+
 # -*- coding: utf-8 -*-
 """
 Introduction:
@@ -322,7 +323,7 @@ model_functions.activate_floodplain_infiltration_factor(hydrologicModel, coupled
 #pdb.set_trace()
 #hydrologicModel.update(1) #doesn't work without startTime
 #a = datetime.datetime(1984,01,01)
-#b = a.strftime('%Y-%m-%d') 
+#b = a.strftime('%Y-%m-%d')
 #hydrologicModel.get_start_time = b
 #print hydrologicModel.get_start_time #works for BMI function, but doesn't add info to other PCR functions
 
