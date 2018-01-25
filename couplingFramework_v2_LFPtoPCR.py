@@ -164,6 +164,15 @@ PCRcoords = coupling_functions.getPCRcoords(landmask_data_pcr)
 print '\n>>> PCR data retrieved <<<\n'
 
 # -------------------------------------------------------------------------------------------------
+# ACTIVATING COUPLING FOR RELEVANT PCR SECTIONS
+# -------------------------------------------------------------------------------------------------
+
+hydrologicModel.set_var(('grassland','ActivateCoupling'), 'True') #2way
+hydrologicModel.set_var(('forest','ActivateCoupling'), 'True') #2way
+hydrologicModel.set_var(('routing','ActivateCoupling'), 'True')
+hydrologicModel.set_var(('WaterBodies', 'ActivateCoupling'), 'True')
+
+# -------------------------------------------------------------------------------------------------
 # COUPLING THE GRIDS
 # -------------------------------------------------------------------------------------------------
 
@@ -181,17 +190,6 @@ elif use_2way == True:
     couple_HDYN_2_HLOG, couple_HLOG_2_HDYN, coupled_HLOG_indices = coupling_functions.assignPCR2cells(landmask_pcr, hydrodynamic_coords_1D, verbose)
 	# linking PCR-cells with 2D hydrodynamic cells
     couple_HDYN_2_HLOG_2way, couple_HLOG_2_HDYN_2way, coupled_HLOG_indices_2way = coupling_functions.assignPCR2cells(landmask_pcr, hydrodynamic_coords_2D, verbose)
-
-# -------------------------------------------------------------------------------------------------
-# TURNING OFF CHANNELSTORAGE AND WATERBODYSTORAGE
-#
-# for 1D HDYN <-> HLOG
-# this is required to avoid the entire water volume in channels and waterbodies to empty at once into DFM/LFP
-# also, channel storage in HLOG will be updated based on HDYN after first update
-# besides, coupling is activated for relevant sections (has to be de-activated initially, otherwise spin-up does not work)
-# -------------------------------------------------------------------------------------------------
-
-model_functions.noStorage(hydrologicModel, missing_value_pcr, coupled_HLOG_indices, couple_HLOG_2_HDYN)
 
 # -------------------------------------------------------------------------------------------------
 # TURNING OFF ROUTING BY PCR IN COUPLED AREA
@@ -212,23 +210,26 @@ model_functions.noLDD(hydrologicModel, coupled_HLOG_indices, verbose_folder, ver
 # inundatedFraction_HDYN2D_2_HLOG_BMI	= array of fractional inundated area of all 2D hydrodynamic cells per hydrologic cell; to be used with BMI-command
 # -------------------------------------------------------------------------------------------------
 
-inundatedArea_HDYN1D_2_HLOG, inundatedArea_HDYN2D_2_HLOG, inundatedArea_HDYN2D_2_HLOG_BMI, inundatedFraction_HDYN2D_2_HLOG, inundatedFraction_HDYN2D_2_HLOG_BMI = model_functions.determine_InundationArea_Hydrodynamics(model_type,
-                                                                                                                                                                                    hydrodynamicModel,
-                                                                                                                                                                                    couple_HLOG_2_HDYN,
-                                                                                                                                                                                    coupled_HLOG_indices,
-																																													couple_HLOG_2_HDYN_2way,
-																																													coupled_HLOG_indices_2way,
-																																													threshold_inundated_depth,
-																																													cellAreaSpherical_1D,
-																																													cellAreaSpherical_2D,
-																																													cellarea_data_pcr,
-																																													landmask_pcr,
-																																													missing_value_landmask)
+inundatedArea_HDYN1D_2_HLOG, inundatedArea_HDYN2D_2_HLOG, inundatedArea_HDYN2D_2_HLOG_BMI, \
+			inundatedFraction_HDYN2D_2_HLOG, inundatedFraction_HDYN2D_2_HLOG_BMI = model_functions.determine_InundationArea_Hydrodynamics(model_type,
+                                                                                                                                        hydrodynamicModel,
+                                                                                                                                        couple_HLOG_2_HDYN,
+                                                                                                                                        coupled_HLOG_indices,
+																																		couple_HLOG_2_HDYN_2way,
+																																		coupled_HLOG_indices_2way,
+																																		threshold_inundated_depth,
+																																		cellAreaSpherical_1D,
+																																		cellAreaSpherical_2D,
+																																		cellarea_data_pcr,
+																																		landmask_pcr,
+																																		missing_value_landmask)
 plt.figure()
 plt.imshow(inundatedArea_HDYN2D_2_HLOG_BMI)
+plt.colorbar()
 plt.savefig(os.path.join(verbose_folder,'inundatedArea_HDYN2D_2_HLOG_BMI.png'), dpi=300)
 plt.figure()
 plt.imshow(inundatedFraction_HDYN2D_2_HLOG_BMI)
+plt.colorbar()
 plt.savefig(os.path.join(verbose_folder,'inundatedFraction_HDYN2D_2_HLOG_BMI.png'), dpi=300)
 
 # -------------------------------------------------------------------------------------------------
@@ -251,16 +252,39 @@ waterVolume_HDYN1D_2_HLOG_BMI, waterVolume_HDYN2D_2_HLOG_BMI, waterDepths_HDYN2D
 																										coupled_HLOG_indices_2way)
 plt.figure()
 plt.imshow(waterVolume_HDYN1D_2_HLOG_BMI)
+plt.colorbar()
 plt.savefig(os.path.join(verbose_folder,'waterVolume_HDYN1D_2_HLOG_BMI.png'), dpi=300)
 plt.figure()
+plt.imshow(hydrologicModel.get_var('channelStorage'))
+plt.colorbar()
+plt.savefig(os.path.join(verbose_folder,'initialChannelStoragePCR.png'), dpi=300)
+plt.figure()
 plt.imshow(inundatedFraction_HDYN2D_2_HLOG_BMI)
+plt.colorbar()
 plt.savefig(os.path.join(verbose_folder,'waterVolume_HDYN2D_2_HLOG_BMI.png'), dpi=300)
 plt.figure()
 plt.imshow(inundatedFraction_HDYN2D_2_HLOG_BMI)
+plt.colorbar()
 plt.savefig(os.path.join(verbose_folder,'waterDepths_HDYN2D_2_HLOG_BMI.png'), dpi=300)
 
-pdb.set_trace()
+# -------------------------------------------------------------------------------------------------
+# UPDATING CHANNELSTORAGE AND TURNING OFF WATERBODYSTORAGE
+#
+# for 1D HDYN <-> HLOG
+# this is required to avoid the entire water volume in channels and waterbodies to empty at once into DFM/LFP
+# also, channel storage in HLOG will be updated based on HDYN after first update
+# -------------------------------------------------------------------------------------------------
+
+model_functions.updateStorage(hydrologicModel, landmask_pcr, missing_value_pcr, missing_value_landmask, coupled_HLOG_indices, couple_HLOG_2_HDYN, waterVolume_HDYN1D_2_HLOG_BMI)
+
+plt.figure()
+plt.imshow(hydrologicModel.get_var('channelStorage'))
+plt.colorbar()
+plt.savefig(os.path.join(verbose_folder,'updatedChannelStoragePCR.png'), dpi=300)
+
 ### - model works until here - ###
+pdb.set_trace()
+
 # -------------------------------------------------------------------------------------------------
 # CALCULATE DELTA VOLUMES (DAY 1)
 #
@@ -283,18 +307,6 @@ delta_volume_PCR, delta_volume_PCR_1way = model_functions.calculateDeltaVolumes(
 # if applied to DFM/LFP as flux, then delta_volume_PCR_1way is used
 # if applied to DFM/LFP as state, then delta_volume_PCR_1way needs to be converted to delta_water_DFM_1way
 delta_water_DFM_1way, verbose_volume_DFM_1way = model_functions.calculateDeltaWater(hydrodynamicModel, couple_HDYN_2_HLOG, couple_HLOG_2_HDYN, delta_volume_PCR_1way, cellAreaSpherical_1D, fraction_timestep, model_type, use_Fluxes)
-
-# saving PCR-GLOBWB output volumes and volumes used as input to hydraulic models to verbose-folder
-if verbose == True:
-	# initial file objects
-    fo_PCR_V_tot = open(os.path.join(verbose_folder, 'delta_volume_PCR_1way.txt'), 'w')
-    fo_verbose_volume_DFM_1way = open(os.path.join(verbose_folder, 'verbose_volume_DFM_1way.txt'), 'w')
-    # aggregate daily totals
-    delta_volume_PCR_total_aggr = np.sum(delta_volume_PCR_1way)
-    verbose_volume_DFM_1way_aggr = np.sum(verbose_volume_DFM_1way)
-    # write daily totals to file
-    fo_PCR_V_tot.write(str(delta_volume_PCR_total_aggr) + os.linesep)
-    fo_verbose_volume_DFM_1way.write(str(verbose_volume_DFM_1way_aggr) + os.linesep)
 
 # check to ensure that volumes are equal, i.e. no errors in water balance
 if np.round(np.sum(np.asfarray(delta_volume_PCR_1way)),4) != np.round(np.sum(np.asfarray(verbose_volume_DFM_1way)), 4):
@@ -335,13 +347,7 @@ while hydrologicModel.get_time_step() < nr_model_timesteps:
 
 
 
-    # DETERMINING NEW STORAGE IN PCR-CHANNELS
-    # for PCR <-> 1D
-    # returns 2d-array to be set back into PCR via BMI
-    new_storage_pcr = model_functions.determine_new_channelStoragePCR(hydrologicModel,
-                                                                      landmask_pcr,
-                                                                      missing_value_landmask,
-                                                                      waterVolume_HDYN1D_2_HLOG_BMI)
+
 
     # UPDATE VARIABLES IN PCR
     # for PCR <-> 1D

@@ -499,7 +499,7 @@ def determine_InundationDepth_Hydrodynamics(model_type, model_hydr, landmask_pcr
 
 # =============================================================================
 
-def noStorage(model_pcr, missing_value_pcr, CoupledPCRcellIndices, CouplePCR2model):
+def updateStorage(model_pcr, landmask_pcr, missing_value_pcr, missing_value_landmask, CoupledPCRcellIndices, CouplePCR2model, waterVolume_HDYN1D_2_HLOG_BMI):
     """
     This is done to prevent the lakes/reservoirs in PCR from draining all at once,
     introducing a huge flood wave at certain areas, e.g. reservoirs.
@@ -508,22 +508,21 @@ def noStorage(model_pcr, missing_value_pcr, CoupledPCRcellIndices, CouplePCR2mod
     """
 
     # get required variables from PCR-GLOBWB
-    current_channel_storage_pcr     = model_pcr.get_var('channelStorage')
+    #-OLD: current_channel_storage_pcr     = model_pcr.get_var('channelStorage')
     current_waterbody_storage_pcr   = model_pcr.get_var(('routing', 'waterBodyStorage'))
 
+    new_storage_pcr = determine_new_channelStoragePCR(model_pcr,
+                                                        landmask_pcr,
+                                                        missing_value_landmask,
+                                                        waterVolume_HDYN1D_2_HLOG_BMI)
+
     # no channel storage
-    new_channel_storage_pcr = set_values_in_array(current_channel_storage_pcr, CoupledPCRcellIndices, 0.)
+    #-OLD: new_channel_storage_pcr = set_values_in_array(current_channel_storage_pcr, CoupledPCRcellIndices, 0.)
     # # no waterbody storage
     new_waterbody_storage_pcr = set_values_in_array(current_waterbody_storage_pcr, CoupledPCRcellIndices, 0.)
 
-    # activating coupling for relevant sections
-    model_pcr.set_var(('grassland','ActivateCoupling'), 'True') #2way
-    model_pcr.set_var(('forest','ActivateCoupling'), 'True') #2way
-    model_pcr.set_var(('routing','ActivateCoupling'), 'True')
-    model_pcr.set_var(('WaterBodies', 'ActivateCoupling'), 'True')
-
     # overwriting variables with new values
-    model_pcr.set_var('channelStorage', new_channel_storage_pcr, missing_value_pcr)
+    model_pcr.set_var('channelStorage', new_storage_pcr, missing_value_pcr)
     model_pcr.set_var(('routing','waterBodyStorage'), new_waterbody_storage_pcr)
 
     return
