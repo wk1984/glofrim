@@ -529,7 +529,7 @@ def updateStorage(model_pcr, landmask_pcr, missing_value_pcr, missing_value_land
 
 # =============================================================================
 
-def updateHydrologicVariables(model_pcr, water_depths_floodplains_FM_2_PCR, inundated_fraction_floodplains_FM_2_PCR, new_channelStorage_pcr, couple_channel_storage):
+def updateHydrologicVariables(model_pcr, water_depths_floodplains_FM_2_PCR, inundated_fraction_floodplains_FM_2_PCR):
     """
     This functions update inundation depth and fraction in the hydrologic models based on hydrodynamic results
 
@@ -548,18 +548,27 @@ def updateHydrologicVariables(model_pcr, water_depths_floodplains_FM_2_PCR, inun
     """
 
     # add water from FM floodplains back to PCR
+    #- testing before setting
+    print 'grassland floodplainWaterLayer before setting:'
+    print 'min', np.min(water_depths_floodplains_FM_2_PCR)
+    print 'max', np.max(water_depths_floodplains_FM_2_PCR)
+    #- setting values
     model_pcr.set_var(('grassland','floodplainWaterLayer'), water_depths_floodplains_FM_2_PCR)
     model_pcr.set_var(('forest','floodplainWaterLayer'), water_depths_floodplains_FM_2_PCR)
+    #- testing after setting
+    print 'grassland floodplainWaterLayer after setting:'
+    print 'min', np.min(model_pcr.get_var(('grassland','floodplainWaterLayer')))
+    print 'max', np.min(model_pcr.get_var(('grassland','floodplainWaterLayer')))
 
     # set the variable for dealing with floodplain inundated area fraction in PCR
     model_pcr.set_var(('grassland','inundatedFraction'), inundated_fraction_floodplains_FM_2_PCR)
     model_pcr.set_var(('forest','inundatedFraction'), inundated_fraction_floodplains_FM_2_PCR)
 
-    if couple_channel_storage == True:
-        # add water from FM rivers back to PCR
-        print '\nwater volume added to channelStorage in PCR %.2E' % np.sum(new_channelStorage_pcr)
-        print ''
-        model_pcr.set_var(('routing','channelStorage'), new_channelStorage_pcr)
+    # if couple_channel_storage == True:
+    #     # add water from FM rivers back to PCR
+    #     print '\nwater volume added to channelStorage in PCR %.2E' % np.sum(new_channelStorage_pcr)
+    #     print ''
+    #     model_pcr.set_var(('routing','channelStorage'), new_channelStorage_pcr)
 
 #   # assuming this in not required anymore if RFS is implemented differently than in Arjen's version
 #	# could however still be implemented just that then it would be one array and not the fractions and in the worst case the fraction is 1 always?

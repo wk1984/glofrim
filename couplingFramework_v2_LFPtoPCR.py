@@ -283,6 +283,19 @@ plt.colorbar()
 plt.savefig(os.path.join(verbose_folder,'updatedChannelStoragePCR.png'), dpi=300)
 
 ### - model works until here - ###
+
+# ------------------------------------------------------------------------------------------------
+# UPDATE VARIABLES IN PCR
+# updates several variables in PCR based on previously determined 2d-arrays
+# REMARK: is it actually necessary to update channel storage in PCR?
+# QUESTION: why doing this before actually accounting for negative water volumes? wouldn't it make more sense to first adapt water levels in DFM and then determine water depth and inundation fraction?
+#           and these water levels/fraction would then be set back to PCR to force MODFLOW....
+# -------------------------------------------------------------------------------------------------
+
+model_functions.updateHydrologicVariables(hydrologicModel,
+                                          waterDepths_HDYN2D_2_HLOG_BMI,
+                                          inundatedFraction_HDYN2D_2_HLOG_BMI)
+										  
 pdb.set_trace()
 
 # -------------------------------------------------------------------------------------------------
