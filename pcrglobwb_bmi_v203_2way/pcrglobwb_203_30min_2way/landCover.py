@@ -1259,7 +1259,10 @@ class LandCover(object):
         # ADDED: add topWaterLayer to floodplainWaterLayer before any losses to get total amount within inundated fraction
         # ----------------------------------------------------------------------------------------------------------------
         if self.ActivateCoupling == 'True':
+            print 'max tWL before merge: ', np.max(pcr2numpy(self.topWaterLayer, -999))
+            print 'max fWL before merge: ', np.max(pcr2numpy(self.floodplainWaterLayer, -999))
             self.floodplainWaterLayer = self.floodplainWaterLayer + self.topWaterLayer
+            print 'max tWL+fWL after merge: ', np.max(pcr2numpy(self.floodplainWaterLayer, -999))
         # ----------------------------------------------------------------------------------------------------------------
         self.openWaterEvap = pcr.spatial(pcr.scalar(0.))
         remainingPotETP = self.potBareSoilEvap + self.potTranspiration   # Edwin's principle: LIMIT = self.potBareSoilEvap +self.potTranspiration

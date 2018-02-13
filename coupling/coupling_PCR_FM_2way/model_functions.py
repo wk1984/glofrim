@@ -549,16 +549,16 @@ def updateHydrologicVariables(model_pcr, water_depths_floodplains_FM_2_PCR, inun
 
     # add water from FM floodplains back to PCR
     #- testing before setting
-    print 'grassland floodplainWaterLayer before setting:'
-    print 'min', np.min(water_depths_floodplains_FM_2_PCR)
-    print 'max', np.max(water_depths_floodplains_FM_2_PCR)
+    # print 'grassland floodplainWaterLayer before setting:'
+    # print 'min', np.min(water_depths_floodplains_FM_2_PCR)
+    # print 'max', np.max(water_depths_floodplains_FM_2_PCR)
     #- setting values
     model_pcr.set_var(('grassland','floodplainWaterLayer'), water_depths_floodplains_FM_2_PCR)
     model_pcr.set_var(('forest','floodplainWaterLayer'), water_depths_floodplains_FM_2_PCR)
     #- testing after setting
-    print 'grassland floodplainWaterLayer after setting:'
-    print 'min', np.min(model_pcr.get_var(('grassland','floodplainWaterLayer')))
-    print 'max', np.min(model_pcr.get_var(('grassland','floodplainWaterLayer')))
+    # print 'grassland floodplainWaterLayer after setting:'
+    # print 'min', np.min(model_pcr.get_var(('grassland','floodplainWaterLayer')))
+    # print 'max', np.min(model_pcr.get_var(('grassland','floodplainWaterLayer')))
 
     # set the variable for dealing with floodplain inundated area fraction in PCR
     model_pcr.set_var(('grassland','inundatedFraction'), inundated_fraction_floodplains_FM_2_PCR)
@@ -646,23 +646,30 @@ def calculateDeltaVolumes(model_pcr, missing_value_pcr, secPerDay, CoupledPCRcel
 
     # Step 2: deterime total input volume from PCR-GLOBWB that should be present at this time step
     water_volume_PCR_total_in = water_volume_PCR_rivers + water_volume_PCR_runoff #+ water_volume_PCR_waterlayer
+    
     print '\ndelta volume of all PCR cells before feedback from DFM: %.2E' % np.sum(water_volume_PCR_total_in)
 
     # Step 3: remove water volume already present in PCR-GLOBWB from previous time step to obtain delta volume
+    # this is the final delta volume
+    # it can locally be negative if more volume is present in DFM than in PCR-GLOBWB
     delta_volume_PCR = water_volume_PCR_total_in - water_volume_FM_2_PCR
+    
     print 'feedback volume from FM: %.2E ' % np.sum(water_volume_FM_2_PCR)
-    print 'delta volume of all PCR cells after feedback from FM: %.2E' % np.sum(delta_volume_PCR)
+    print 'delta volume of all PCR cells after feedback from DFM: %.2E' % np.sum(delta_volume_PCR)
     print 'reduction by ', np.round((1-(np.sum(delta_volume_PCR) / np.sum(water_volume_PCR_total_in)))*100., 2), '%'
 
     # Step 4: clip to coupled PCR-GLOBWB cells only
     delta_volume_PCR_coupled = delta_volume_PCR[zip(*CoupledPCRcellIndices)]
+    
     print 'delta volume for PCR cells coupled to hydrodynamic channels only %.2E' % np.sum(delta_volume_PCR_coupled)
 
-    #if np.round(np.sum(water_volume_PCR_total_in[zip(*CoupledPCRcellIndices)]) - np.sum(water_volume_FM_2_PCR[zip(*CoupledPCRcellIndices)]), decimals=-6) != np.round(np.sum(delta_volume_PCR_coupled), decimals=-6):
+    # Step 5: water balance check
     if ((np.sum(water_volume_PCR_total_in[zip(*CoupledPCRcellIndices)]) - np.sum(water_volume_FM_2_PCR[zip(*CoupledPCRcellIndices)])) / np.sum(delta_volume_PCR_coupled) < 0.95) or \
 			((np.sum(water_volume_PCR_total_in[zip(*CoupledPCRcellIndices)]) - np.sum(water_volume_FM_2_PCR[zip(*CoupledPCRcellIndices)])) / np.sum(delta_volume_PCR_coupled) > 1.05):
+				
 		print 'computed delta vol:  ', np.sum(water_volume_PCR_total_in[zip(*CoupledPCRcellIndices)]) - np.sum(water_volume_FM_2_PCR[zip(*CoupledPCRcellIndices)])
 		print 'resulting delta vol: ', np.sum(delta_volume_PCR_coupled)
+		
 		sys.exit('\nERROR: water balance in calculating delta volume not accurate!\n')
 
     return delta_volume_PCR, delta_volume_PCR_coupled
@@ -684,6 +691,10 @@ def calculateDeltaWater(model_hydr, CoupleModel2PCR, CouplePCR2model, delta_volu
     Output:
         - delta state [m/d] or [m/timestep]
         - delta flux [m3/s]
+        
+    TODO: has to be re-written such that if delta volume is positive, water is removed from PCR to be aligned with DFM/LFP (currently: water is added to DFM/LFP to be aligned with PCR)
+    TODO: has to be re-written such that if delta volume is negative, water is added to PCR to be aligned with DFM/LFP (currently: water is removed from DFM/LFP to be aligned with PCR)
+			--> both requires extensive re-coding!
     """
 
     #- creating zero arrays to be populated with data
@@ -695,6 +706,7 @@ def calculateDeltaWater(model_hydr, CoupleModel2PCR, CouplePCR2model, delta_volu
     for i in range(len(CouplePCR2model)):
 
         # check if delta volume is positive
+        # this is the case if more water
         if delta_volume_PCR_coupled[i] >= 0.:
 
             # divided volume by number of hydrodynamic cells in each PCR-cell
@@ -715,7 +727,9 @@ def calculateDeltaWater(model_hydr, CoupleModel2PCR, CouplePCR2model, delta_volu
                 verbose_volume[current_cell_index] = temp_water_volume  / 1.
 
         elif delta_volume_PCR_coupled[i] < 0.:
-			os.sys.exit('\n>>> delta volume should not be negative anymore!<<<\n')
+            #-ONLY TEMPORARYLIY
+            delta_volume_PCR_coupled[i] = 0.
+            #os.sys.exit('\n>>> delta volume should not be negative anymore!<<<\n')
 
     # calculate additional water levels or fluxes based on chosen settings
     if (useFluxes == False) and (model_type == 'DFM'):
