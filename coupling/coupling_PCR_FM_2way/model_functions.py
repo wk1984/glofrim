@@ -414,17 +414,19 @@ def determine_InundationArea2D_Hydrodynamics(CouplePCR2model_2way, CoupledPCRcel
 
 # =============================================================================
 
-def determine_inundationVolume_HDYN_1D(hydr_model, currentVolume_HDYN, CouplePCR2model_1way, CoupledPCRcellIndices_1way, landmask_pcr):
+def determine_inundationVolume_HDYN_1D(hydr_model, inundated_area_FM_2_PCR_coupled_1D, currentVolume_HDYN, CouplePCR2model_1way, CoupledPCRcellIndices_1way, landmask_pcr):
     """
     """
 
     # initializing arrays for PCR cells
     # for those coupled to 1D
     water_volume_FM_2_PCR_coupled_1D = np.zeros(len(CouplePCR2model_1way))
+    water_depths_FM_2_PCR_coupled_1D = np.zeros(len(CouplePCR2model_1way))
 
     # create zero array of appropriate size for using BMI function 'set_var'
     #water_volume_FM_2_PCR_BMI_1D 	= coupling_functions.zeroMapArray(landmask_pcr, missingValuesMap=-255)
     water_volume_FM_2_PCR_BMI_1D  	= np.copy(hydr_model.get_var(('routing','channelStorage')))
+    water_depths_FM_2_PCR_BMI_1D    = np.zeros_like(water_volume_FM_2_PCR_BMI_1D)
 
     # loop over all PCR cells coupled to hydrodynamic channels and fill in and/or calculate values
     for i in range(len(CouplePCR2model_1way)):
@@ -435,8 +437,18 @@ def determine_inundationVolume_HDYN_1D(hydr_model, currentVolume_HDYN, CouplePCR
 		# assign aggregated water volume to array to be later used with BMI
 		water_volume_FM_2_PCR_BMI_1D[CoupledPCRcellIndices_1way[i]] = water_volume_FM_2_PCR_coupled_1D[i]
 
+        # divide aggregated water volume per coupled PCR cell by aggregated DFM/LFP inundation area per coupled PCR cell to compute water depth per coupled PCR cell
+		if inundated_area_FM_2_PCR_coupled_1D[i] > 0. :
+			water_depths_FM_2_PCR_coupled_1D[i] = water_volume_FM_2_PCR_coupled_1D[i] / inundated_area_FM_2_PCR_coupled_1D[i]
 
-    return water_volume_FM_2_PCR_coupled_1D, water_volume_FM_2_PCR_BMI_1D
+		else:
+			water_depths_FM_2_PCR_coupled_1D[i] = 0.
+
+        # assign computed water depth to array to be later used with BMI
+		water_depths_FM_2_PCR_BMI_1D[CoupledPCRcellIndices_1way[i]] = water_depths_FM_2_PCR_coupled_1D[i]
+
+
+    return water_volume_FM_2_PCR_coupled_1D, water_volume_FM_2_PCR_BMI_1D, water_depths_FM_2_PCR_BMI_1D
 
 # =============================================================================
 
