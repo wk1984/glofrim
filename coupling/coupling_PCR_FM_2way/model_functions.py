@@ -326,6 +326,29 @@ def activate2wayVariables(model_pcr, CoupledPCRcellIndices):
 
 # =============================================================================
 
+def determine_bottomElev1D_Hydrodynamics(CouplePCR2model_1way, CoupledPCRcellIndices_1way, bottom_lvl_fm, landmask_pcr):
+
+    bottom_lvl_1D_coupled   = np.zeros(len(CouplePCR2model_1way))
+    bottom_lvl_1D_BMI	    = coupling_functions.zeroMapArray(landmask_pcr, missingValuesMap=-999)
+
+    for i in range(len(CouplePCR2model_1way)):
+
+        temp_bottom_lvl_1D_BMI = []
+
+        for j in range(len(CouplePCR2model_1way[i][1])):
+
+            current_hydrodynamic_cell_index = CouplePCR2model_1way[i][1][j]
+
+            temp_bottom_lvl_1D_BMI = np.append(temp_bottom_lvl_1D_BMI, bottom_lvl_fm[current_hydrodynamic_cell_index])
+
+        bottom_lvl_1D_coupled[i] = np.average(temp_bottom_lvl_1D_BMI)
+
+        bottom_lvl_1D_BMI[CoupledPCRcellIndices_1way[i]] = bottom_lvl_1D_coupled[i]
+
+    return bottom_lvl_1D_BMI
+
+# =============================================================================
+
 def determine_InundationArea1D_Hydrodynamics(CouplePCR2model_1way, CoupledPCRcellIndices_1way, current_water_depth, threshold_inundated_depth, cellAreaSpherical_1way, cellarea_data_pcr, landmask_pcr):
 
     # initiate arrays, both for entire PCR extent to be used with BMI and for coupled PCR cells stored in list only
