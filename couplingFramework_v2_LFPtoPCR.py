@@ -31,7 +31,7 @@ from coupling_PCR_FM_2way import coupling_functions
 from coupling_PCR_FM_2way import model_functions
 from coupling_PCR_FM_2way import utils
 from coupling_PCR_FM_2way import configuration
-get_ipython().magic(u'config Application.log_level="INFO"')
+# get_ipython().magic(u'config Application.log_level="INFO"')
 
 
 # In[2]:
@@ -40,11 +40,11 @@ get_ipython().magic(u'config Application.log_level="INFO"')
 # IMPORT MODEL SETTINGS FROM INI-FILE/SET-FILE
 # -------------------------------------------------------------------------------------------------
 
-arg = r'/home/jannis/PhD/scripts/2WAY/2way_AMA_1d2d_codeDevelopment.ini'
+# arg = r'/home/jannis/PhD/scripts/2WAY/2way_AMA_1d2d_codeDevelopment.ini'
 
 config = configuration.Configuration()
-#config.parse_configuration_file(sys.argv[1])
-config.parse_configuration_file(arg)
+config.parse_configuration_file(sys.argv[1])
+# config.parse_configuration_file(arg)
 
 
 # In[3]:
@@ -90,12 +90,6 @@ threshold_inundated_depth             = float(config.numerical_settings['thresho
 # other
 missing_value_landmask                = 255
 missing_value_pcr                     = -999
-
-
-# In[5]:
-
-nr_model_timesteps
-
 
 # In[6]:
 
@@ -176,16 +170,16 @@ print '\n>>> ',model_type,' Initialized <<<\n'
 if model_type == 'DFM':
 
     #- retrieving data from Delft3D FM
-    bottom_lvl_1D, bottom_lvl_2D, cellAreaSpherical_1D, cellAreaSpherical_2D,         hydrodynamic_coords_1D, hydrodynamic_coords_2D, separator_1D  = model_functions.extractModelData_DFM(hydrodynamicModel, 
-                                                                                                             use_RFS, 
+    bottom_lvl_1D, bottom_lvl_2D, cellAreaSpherical_1D, cellAreaSpherical_2D,         hydrodynamic_coords_1D, hydrodynamic_coords_2D, separator_1D  = model_functions.extractModelData_DFM(hydrodynamicModel,
+                                                                                                             use_RFS,
                                                                                                              use_2way)
 
     coupledFPindices = 0.
     print '\n>>> DFM data retrieved <<<\n'
 
 #- computing PCR-coordinates
-cellarea_data_pcr, landmask_data_pcr, clone_data_pcr = model_functions.extractModelData_PCR(hydrologicModel, 
-                                                                                            landmask_pcr, 
+cellarea_data_pcr, landmask_data_pcr, clone_data_pcr = model_functions.extractModelData_PCR(hydrologicModel,
+                                                                                            landmask_pcr,
                                                                                             clone_pcr)
 PCRcoords = coupling_functions.getPCRcoords(landmask_data_pcr)
 print '\n>>> PCR data retrieved <<<\n'
@@ -210,12 +204,12 @@ hydrologicModel.set_var(('WaterBodies', 'ActivateCoupling'), 'True')
 # -------------------------------------------------------------------------------------------------
 
 # linking PCR-cells with 1D hydrodynamic cells (since use_RFS=True)
-couple_HDYN_2_HLOG, couple_HLOG_2_HDYN, coupled_HLOG_indices = coupling_functions.assignPCR2cells(landmask_pcr, 
-                                                                                                  hydrodynamic_coords_1D, 
+couple_HDYN_2_HLOG, couple_HLOG_2_HDYN, coupled_HLOG_indices = coupling_functions.assignPCR2cells(landmask_pcr,
+                                                                                                  hydrodynamic_coords_1D,
                                                                                                   verbose)
 # linking PCR-cells with 2D hydrodynamic cells
-couple_HDYN_2_HLOG_2way, couple_HLOG_2_HDYN_2way, coupled_HLOG_indices_2way = coupling_functions.assignPCR2cells(landmask_pcr, 
-                                                                                                                 hydrodynamic_coords_2D, 
+couple_HDYN_2_HLOG_2way, couple_HLOG_2_HDYN_2way, coupled_HLOG_indices_2way = coupling_functions.assignPCR2cells(landmask_pcr,
+                                                                                                                 hydrodynamic_coords_2D,
                                                                                                                  verbose)
 
 
@@ -226,10 +220,10 @@ bottomElevation_HDYN1D_2_HLOG_BMI = model_functions.determine_bottomElev1D_Hydro
                                                                                          bottom_lvl_1D,
                                                                                          landmask_pcr)
 
-plt.figure(figsize=(16,8))
-plt.title('upscaled 1D bottom level elevation [m+NN]')
-plt.imshow(bottomElevation_HDYN1D_2_HLOG_BMI)
-plt.colorbar()
+# plt.figure(figsize=(16,8))
+# plt.title('upscaled 1D bottom level elevation [m+NN]')
+# plt.imshow(bottomElevation_HDYN1D_2_HLOG_BMI)
+# plt.colorbar()
 
 
 # In[14]:
@@ -240,9 +234,9 @@ plt.colorbar()
 
 newLDD = model_functions.noLDD(hydrologicModel, coupled_HLOG_indices, verbose_folder, verbose)
 
-plt.figure()
-plt.imshow(newLDD)
-plt.colorbar()
+# plt.figure()
+# plt.imshow(newLDD)
+# plt.colorbar()
 #plt.savefig(os.path.join(verbose_folder,'coupledLDD.png'), dpi=300)
 
 
@@ -255,41 +249,42 @@ current_water_depth_2D = current_water_depth[:separator_1D]
 
 # In[16]:
 
-inundatedArea_HDYN1D_2_HLOG,     inundatedArea_HDYN1D_2_HLOG_BMI = model_functions.determine_InundationArea1D_Hydrodynamics(couple_HLOG_2_HDYN,
-                                                                                               coupled_HLOG_indices,
-                                                                                               current_water_depth_1D,
-                                                                                               threshold_inundated_depth,
-                                                                                               cellAreaSpherical_1D,
-                                                                                               cellarea_data_pcr,
-                                                                                               landmask_pcr)
+inundatedArea_HDYN1D_2_HLOG, inundatedArea_HDYN1D_2_HLOG_BMI = model_functions.determine_InundationArea1D_Hydrodynamics(couple_HLOG_2_HDYN,
+							                                                                                               coupled_HLOG_indices,
+							                                                                                               current_water_depth_1D,
+							                                                                                               threshold_inundated_depth,
+							                                                                                               cellAreaSpherical_1D,
+							                                                                                               cellarea_data_pcr,
+							                                                                                               landmask_pcr)
 
 
 # In[17]:
 
-inundatedArea_HDYN2D_2_HLOG,     inundatedArea_HDYN2D_2_HLOG_BMI,         inundatedFraction_HDYN2D_2_HLOG,             inundatedFraction_HDYN2D_2_HLOG_BMI = model_functions.determine_InundationArea2D_Hydrodynamics(couple_HLOG_2_HDYN_2way,
-                                                                                                           coupled_HLOG_indices_2way,
-                                                                                                           current_water_depth_2D,
-                                                                                                           threshold_inundated_depth,
-                                                                                                           cellAreaSpherical_2D,
-                                                                                                           cellarea_data_pcr,
-                                                                                                           landmask_pcr)
+inundatedArea_HDYN2D_2_HLOG, inundatedArea_HDYN2D_2_HLOG_BMI,\
+	inundatedFraction_HDYN2D_2_HLOG, inundatedFraction_HDYN2D_2_HLOG_BMI = model_functions.determine_InundationArea2D_Hydrodynamics(couple_HLOG_2_HDYN_2way,
+							                                                                                                           coupled_HLOG_indices_2way,
+							                                                                                                           current_water_depth_2D,
+							                                                                                                           threshold_inundated_depth,
+							                                                                                                           cellAreaSpherical_2D,
+							                                                                                                           cellarea_data_pcr,
+							                                                                                                           landmask_pcr)
 
 
 # In[42]:
 
-plt.figure(figsize=(16,8))
-plt.subplot(131)
-plt.title('inundatedArea (1D) [m2]')
-plt.imshow(inundatedArea_HDYN1D_2_HLOG_BMI)
-plt.colorbar(orientation='horizontal')
-plt.subplot(132)
-plt.title('inundatedArea (2D) [m2]')
-plt.imshow(inundatedArea_HDYN2D_2_HLOG_BMI, vmax=np.max(inundatedArea_HDYN1D_2_HLOG_BMI))
-plt.colorbar(orientation='horizontal')
-plt.subplot(133)
-plt.title('inundatedFraction (2D) [m2/m2]')
-plt.imshow(inundatedFraction_HDYN2D_2_HLOG_BMI, vmin=0, vmax=1)
-plt.colorbar(orientation='horizontal')
+# plt.figure(figsize=(16,8))
+# plt.subplot(131)
+# plt.title('inundatedArea (1D) [m2]')
+# plt.imshow(inundatedArea_HDYN1D_2_HLOG_BMI)
+# plt.colorbar(orientation='horizontal')
+# plt.subplot(132)
+# plt.title('inundatedArea (2D) [m2]')
+# plt.imshow(inundatedArea_HDYN2D_2_HLOG_BMI, vmax=np.max(inundatedArea_HDYN1D_2_HLOG_BMI))
+# plt.colorbar(orientation='horizontal')
+# plt.subplot(133)
+# plt.title('inundatedFraction (2D) [m2/m2]')
+# plt.imshow(inundatedFraction_HDYN2D_2_HLOG_BMI, vmin=0, vmax=1)
+# plt.colorbar(orientation='horizontal')
 #plt.savefig(os.path.join(verbose_folder,'inundatedAreaAndFraction_HDYN_2_HLOG_BMI.png'), dpi=300)
 
 
@@ -302,43 +297,43 @@ current_water_volume_2D = current_water_volume[:separator_1D] # 2D floodplain ce
 
 # In[20]:
 
-waterVolume_HDYN1D_2_HLOG,    waterVolume_HDYN1D_2_HLOG_BMI,        waterDepth_HDYN1D_2_HLOG_BMI = model_functions.determine_inundationVolume_HDYN_1D(hydrologicModel,
-                                                                                          inundatedArea_HDYN1D_2_HLOG,
-                                                                                          current_water_volume_1D,
-                                                                                          couple_HLOG_2_HDYN,
-                                                                                          coupled_HLOG_indices, 
-                                                                                          landmask_pcr)
+waterVolume_HDYN1D_2_HLOG, waterVolume_HDYN1D_2_HLOG_BMI, waterDepth_HDYN1D_2_HLOG_BMI = model_functions.determine_inundationVolume_HDYN_1D(hydrologicModel,
+													                                                                                          inundatedArea_HDYN1D_2_HLOG,
+													                                                                                          current_water_volume_1D,
+													                                                                                          couple_HLOG_2_HDYN,
+													                                                                                          coupled_HLOG_indices,
+													                                                                                          landmask_pcr)
 
 
 # In[21]:
 
-waterVolume_HDYN2D_2_HLOG_BMI,    waterDepth_HDYN2D_2_HLOG_BMI = model_functions.determine_inundationVolume_HDYN_2D(current_water_volume_2D, 
-                                                                                      inundatedArea_HDYN2D_2_HLOG,
-                                                                                      waterVolume_HDYN1D_2_HLOG_BMI,
-                                                                                      couple_HLOG_2_HDYN_2way,
-                                                                                      coupled_HLOG_indices_2way,
-                                                                                      landmask_pcr)
+waterVolume_HDYN2D_2_HLOG_BMI, waterDepth_HDYN2D_2_HLOG_BMI = model_functions.determine_inundationVolume_HDYN_2D(current_water_volume_2D,
+							                                                                                      inundatedArea_HDYN2D_2_HLOG,
+							                                                                                      waterVolume_HDYN1D_2_HLOG_BMI,
+							                                                                                      couple_HLOG_2_HDYN_2way,
+							                                                                                      coupled_HLOG_indices_2way,
+							                                                                                      landmask_pcr)
 
 
 # In[22]:
 
-plt.figure(figsize=(16,8))
-plt.subplot(141)
-plt.title('waterVolume (1D) [m3]')
-plt.imshow(waterVolume_HDYN1D_2_HLOG_BMI)
-plt.colorbar(orientation='horizontal')
-plt.subplot(142)
-plt.title('waterDepth (1D) [m3]')
-plt.imshow(waterDepth_HDYN1D_2_HLOG_BMI)
-plt.colorbar(orientation='horizontal')
-plt.subplot(143)
-plt.title('waterVolume (2D) [m3]')
-plt.imshow(waterVolume_HDYN2D_2_HLOG_BMI)
-plt.colorbar(orientation='horizontal')
-plt.subplot(144)
-plt.title('waterDepth (2D) [m]')
-plt.imshow(waterDepth_HDYN2D_2_HLOG_BMI)
-plt.colorbar(orientation='horizontal')
+# plt.figure(figsize=(16,8))
+# plt.subplot(141)
+# plt.title('waterVolume (1D) [m3]')
+# plt.imshow(waterVolume_HDYN1D_2_HLOG_BMI)
+# plt.colorbar(orientation='horizontal')
+# plt.subplot(142)
+# plt.title('waterDepth (1D) [m3]')
+# plt.imshow(waterDepth_HDYN1D_2_HLOG_BMI)
+# plt.colorbar(orientation='horizontal')
+# plt.subplot(143)
+# plt.title('waterVolume (2D) [m3]')
+# plt.imshow(waterVolume_HDYN2D_2_HLOG_BMI)
+# plt.colorbar(orientation='horizontal')
+# plt.subplot(144)
+# plt.title('waterDepth (2D) [m]')
+# plt.imshow(waterDepth_HDYN2D_2_HLOG_BMI)
+# plt.colorbar(orientation='horizontal')
 #plt.savefig(os.path.join(verbose_folder,'inundatedVolumeAndDepth_HDYN_2_HLOG_BMI.png'), dpi=300)
 
 
@@ -354,19 +349,19 @@ model_functions.updateStorage(hydrologicModel, landmask_pcr, missing_value_pcr, 
 
 # In[24]:
 
-plt.figure(figsize=(16,8))
-plt.subplot(131)
-plt.title('initial channelStorage [m3]')
-plt.imshow(ini_channelStorage, vmax=np.max(ini_channelStorage))
-plt.colorbar(orientation='horizontal')
-plt.subplot(132)
-plt.title('waterVolume (1D) [m3]')
-plt.imshow(waterVolume_HDYN1D_2_HLOG_BMI, vmax=np.max(ini_channelStorage))
-plt.colorbar(orientation='horizontal')
-plt.subplot(133)
-plt.title('updated channelStorage [m3]')
-plt.imshow(hydrologicModel.get_var('channelStorage'), vmax=np.max(ini_channelStorage))
-plt.colorbar(orientation='horizontal')
+# plt.figure(figsize=(16,8))
+# plt.subplot(131)
+# plt.title('initial channelStorage [m3]')
+# plt.imshow(ini_channelStorage, vmax=np.max(ini_channelStorage))
+# plt.colorbar(orientation='horizontal')
+# plt.subplot(132)
+# plt.title('waterVolume (1D) [m3]')
+# plt.imshow(waterVolume_HDYN1D_2_HLOG_BMI, vmax=np.max(ini_channelStorage))
+# plt.colorbar(orientation='horizontal')
+# plt.subplot(133)
+# plt.title('updated channelStorage [m3]')
+# plt.imshow(hydrologicModel.get_var('channelStorage'), vmax=np.max(ini_channelStorage))
+# plt.colorbar(orientation='horizontal')
 #plt.savefig(os.path.join(verbose_folder,'iniAndUpdatedChannelStoragePCR.png'), dpi=300)
 
 
@@ -387,59 +382,59 @@ hydrologicModel.update(1)
 #waterVolume_HDYN2D_2_HLOG_BMI = np.zeros_like(waterVolume_HDYN2D_2_HLOG_BMI)
 
 delta_volume_PCR, delta_volume_PCR_1way = model_functions.calculateDeltaVolumes(hydrologicModel,
-                                                                                missing_value_pcr, 
-                                                                                secPerDay, 
-                                                                                coupled_HLOG_indices, 
-                                                                                cellarea_data_pcr, 
+                                                                                missing_value_pcr,
+                                                                                secPerDay,
+                                                                                coupled_HLOG_indices,
+                                                                                cellarea_data_pcr,
                                                                                 waterVolume_HDYN2D_2_HLOG_BMI)
 
 
 # In[28]:
 
-r = np.copy(hydrologicModel.get_var('landSurfaceRunoff'))
-r = r * cellarea_data_pcr
-r[r<=0.] = -999
-Q = np.copy(hydrologicModel.get_var('discharge'))
-Q = Q*86400.
-Q[Q<=0.] = -999
-
-plt.figure(figsize=(16,8))
-plt.subplot(131)
-plt.title('r from PCR [m3]')
-plt.imshow(r)
-plt.colorbar(orientation='horizontal')
-plt.subplot(132)
-plt.title('Q from PCR [m3]')
-plt.imshow(Q)
-plt.colorbar(orientation='horizontal')
-plt.subplot(133)
-plt.title('delta volume PCR [m3/d]')
-plt.imshow(delta_volume_PCR)
-plt.colorbar(orientation='horizontal')
+# r = np.copy(hydrologicModel.get_var('landSurfaceRunoff'))
+# r = r * cellarea_data_pcr
+# r[r<=0.] = -999
+# Q = np.copy(hydrologicModel.get_var('discharge'))
+# Q = Q*86400.
+# Q[Q<=0.] = -999
+#
+# plt.figure(figsize=(16,8))
+# plt.subplot(131)
+# plt.title('r from PCR [m3]')
+# plt.imshow(r)
+# plt.colorbar(orientation='horizontal')
+# plt.subplot(132)
+# plt.title('Q from PCR [m3]')
+# plt.imshow(Q)
+# plt.colorbar(orientation='horizontal')
+# plt.subplot(133)
+# plt.title('delta volume PCR [m3/d]')
+# plt.imshow(delta_volume_PCR)
+# plt.colorbar(orientation='horizontal')
 
 
 # In[29]:
 
-delta_water_DFM_1way, verbose_volume_DFM_1way = model_functions.calculateDeltaWater(hydrodynamicModel, 
-                                                                                    couple_HDYN_2_HLOG, 
+delta_water_DFM_1way, verbose_volume_DFM_1way = model_functions.calculateDeltaWater(hydrodynamicModel,
+                                                                                    couple_HDYN_2_HLOG,
                                                                                     couple_HLOG_2_HDYN,
                                                                                     coupled_HLOG_indices,
-                                                                                    delta_volume_PCR_1way, 
-                                                                                    cellAreaSpherical_1D, 
-                                                                                    fraction_timestep, 
-                                                                                    model_type, 
+                                                                                    delta_volume_PCR_1way,
+                                                                                    cellAreaSpherical_1D,
+                                                                                    fraction_timestep,
+                                                                                    model_type,
                                                                                     use_Fluxes)
 
 
 # In[30]:
 
-model_functions.updateModel(hydrodynamicModel, 
-                            delta_water_DFM_1way, 
-                            update_step, 
-                            separator_1D, 
-                            use_Fluxes, 
-                            use_RFS, 
-                            model_type, 
+model_functions.updateModel(hydrodynamicModel,
+                            delta_water_DFM_1way,
+                            update_step,
+                            separator_1D,
+                            use_Fluxes,
+                            use_RFS,
+                            model_type,
                             verbose)
 
 
@@ -449,35 +444,36 @@ current_water_depth = hydrodynamicModel.get_var('s1') - hydrodynamicModel.get_va
 current_water_depth_1D = current_water_depth[separator_1D:]
 current_water_depth_2D = current_water_depth[:separator_1D]
 
-inundatedArea_HDYN1D_2_HLOG,     inundatedArea_HDYN1D_2_HLOG_BMI = model_functions.determine_InundationArea1D_Hydrodynamics(couple_HLOG_2_HDYN,
-                                                                                               coupled_HLOG_indices,
-                                                                                               current_water_depth_1D,
-                                                                                               threshold_inundated_depth,
-                                                                                               cellAreaSpherical_1D,
-                                                                                               cellarea_data_pcr,
-                                                                                               landmask_pcr)
+inundatedArea_HDYN1D_2_HLOG, inundatedArea_HDYN1D_2_HLOG_BMI = model_functions.determine_InundationArea1D_Hydrodynamics(couple_HLOG_2_HDYN,
+							                                                                                               coupled_HLOG_indices,
+							                                                                                               current_water_depth_1D,
+							                                                                                               threshold_inundated_depth,
+							                                                                                               cellAreaSpherical_1D,
+							                                                                                               cellarea_data_pcr,
+							                                                                                               landmask_pcr)
 
-inundatedArea_HDYN2D_2_HLOG,     inundatedArea_HDYN2D_2_HLOG_BMI,         inundatedFraction_HDYN2D_2_HLOG,             inundatedFraction_HDYN2D_2_HLOG_BMI = model_functions.determine_InundationArea2D_Hydrodynamics(couple_HLOG_2_HDYN_2way,
-                                                                                                           coupled_HLOG_indices_2way,
-                                                                                                           current_water_depth_2D,
-                                                                                                           threshold_inundated_depth,
-                                                                                                           cellAreaSpherical_2D,
-                                                                                                           cellarea_data_pcr,
-                                                                                                           landmask_pcr)
+inundatedArea_HDYN2D_2_HLOG,inundatedArea_HDYN2D_2_HLOG_BMI,\
+	inundatedFraction_HDYN2D_2_HLOG, inundatedFraction_HDYN2D_2_HLOG_BMI = model_functions.determine_InundationArea2D_Hydrodynamics(couple_HLOG_2_HDYN_2way,
+							                                                                                                           coupled_HLOG_indices_2way,
+							                                                                                                           current_water_depth_2D,
+							                                                                                                           threshold_inundated_depth,
+							                                                                                                           cellAreaSpherical_2D,
+							                                                                                                           cellarea_data_pcr,
+							                                                                                                           landmask_pcr)
 
-plt.figure(figsize=(16,8))
-plt.subplot(131)
-plt.title('inundatedArea (1D) [m2]')
-plt.imshow(inundatedArea_HDYN1D_2_HLOG_BMI)
-plt.colorbar(orientation='horizontal')
-plt.subplot(132)
-plt.title('inundatedArea (2D) [m2]')
-plt.imshow(inundatedArea_HDYN2D_2_HLOG_BMI, vmax=np.max(inundatedArea_HDYN1D_2_HLOG_BMI))
-plt.colorbar(orientation='horizontal')
-plt.subplot(133)
-plt.title('inundatedFraction (2D) [m2/m2]')
-plt.imshow(inundatedFraction_HDYN2D_2_HLOG_BMI, vmin=0, vmax=1)
-plt.colorbar(orientation='horizontal')
+# plt.figure(figsize=(16,8))
+# plt.subplot(131)
+# plt.title('inundatedArea (1D) [m2]')
+# plt.imshow(inundatedArea_HDYN1D_2_HLOG_BMI)
+# plt.colorbar(orientation='horizontal')
+# plt.subplot(132)
+# plt.title('inundatedArea (2D) [m2]')
+# plt.imshow(inundatedArea_HDYN2D_2_HLOG_BMI, vmax=np.max(inundatedArea_HDYN1D_2_HLOG_BMI))
+# plt.colorbar(orientation='horizontal')
+# plt.subplot(133)
+# plt.title('inundatedFraction (2D) [m2/m2]')
+# plt.imshow(inundatedFraction_HDYN2D_2_HLOG_BMI, vmin=0, vmax=1)
+# plt.colorbar(orientation='horizontal')
 
 
 # In[32]:
@@ -486,37 +482,37 @@ current_water_volume = np.copy(hydrodynamicModel.get_var('vol1'))
 current_water_volume_1D = current_water_volume[separator_1D:]
 current_water_volume_2D = current_water_volume[:separator_1D]
 
-waterVolume_HDYN1D_2_HLOG,    waterVolume_HDYN1D_2_HLOG_BMI,        waterDepth_HDYN1D_2_HLOG_BMI = model_functions.determine_inundationVolume_HDYN_1D(hydrologicModel,
-                                                                                          inundatedArea_HDYN1D_2_HLOG,
-                                                                                          current_water_volume_1D,
-                                                                                          couple_HLOG_2_HDYN,
-                                                                                          coupled_HLOG_indices, 
-                                                                                          landmask_pcr)
+waterVolume_HDYN1D_2_HLOG, waterVolume_HDYN1D_2_HLOG_BMI, waterDepth_HDYN1D_2_HLOG_BMI = model_functions.determine_inundationVolume_HDYN_1D(hydrologicModel,
+                                                                                          													inundatedArea_HDYN1D_2_HLOG,
+												                                                                                          current_water_volume_1D,
+												                                                                                          couple_HLOG_2_HDYN,
+												                                                                                          coupled_HLOG_indices,
+												                                                                                          landmask_pcr)
 
-waterVolume_HDYN2D_2_HLOG_BMI,    waterDepth_HDYN2D_2_HLOG_BMI = model_functions.determine_inundationVolume_HDYN_2D(current_water_volume_2D, 
-                                                                                      inundatedArea_HDYN2D_2_HLOG,
-                                                                                      waterVolume_HDYN1D_2_HLOG_BMI,
-                                                                                      couple_HLOG_2_HDYN_2way,
-                                                                                      coupled_HLOG_indices_2way,
-                                                                                      landmask_pcr)
+waterVolume_HDYN2D_2_HLOG_BMI, waterDepth_HDYN2D_2_HLOG_BMI = model_functions.determine_inundationVolume_HDYN_2D(current_water_volume_2D,
+							                                                                                      inundatedArea_HDYN2D_2_HLOG,
+							                                                                                      waterVolume_HDYN1D_2_HLOG_BMI,
+							                                                                                      couple_HLOG_2_HDYN_2way,
+							                                                                                      coupled_HLOG_indices_2way,
+							                                                                                      landmask_pcr)
 
-plt.figure(figsize=(16,8))
-plt.subplot(141)
-plt.title('waterVolume (1D) [m3]')
-plt.imshow(waterVolume_HDYN1D_2_HLOG_BMI)
-plt.colorbar(orientation='horizontal')
-plt.subplot(142)
-plt.title('waterDepth (1D) [m3]')
-plt.imshow(waterDepth_HDYN1D_2_HLOG_BMI)
-plt.colorbar(orientation='horizontal')
-plt.subplot(143)
-plt.title('waterVolume (2D) [m3]')
-plt.imshow(waterVolume_HDYN2D_2_HLOG_BMI)
-plt.colorbar(orientation='horizontal')
-plt.subplot(144)
-plt.title('waterDepth (2D) [m]')
-plt.imshow(waterDepth_HDYN2D_2_HLOG_BMI)
-plt.colorbar(orientation='horizontal')
+# plt.figure(figsize=(16,8))
+# plt.subplot(141)
+# plt.title('waterVolume (1D) [m3]')
+# plt.imshow(waterVolume_HDYN1D_2_HLOG_BMI)
+# plt.colorbar(orientation='horizontal')
+# plt.subplot(142)
+# plt.title('waterDepth (1D) [m3]')
+# plt.imshow(waterDepth_HDYN1D_2_HLOG_BMI)
+# plt.colorbar(orientation='horizontal')
+# plt.subplot(143)
+# plt.title('waterVolume (2D) [m3]')
+# plt.imshow(waterVolume_HDYN2D_2_HLOG_BMI)
+# plt.colorbar(orientation='horizontal')
+# plt.subplot(144)
+# plt.title('waterDepth (2D) [m]')
+# plt.imshow(waterDepth_HDYN2D_2_HLOG_BMI)
+# plt.colorbar(orientation='horizontal')
 # plt.savefig(os.path.join(verbose_folder,'inundatedVolumeAndDepth_HDYN_2_HLOG_BMI.png'), dpi=300)
 
 
@@ -529,19 +525,19 @@ if couple_channelStorage == False:
 
 model_functions.updateStorage(hydrologicModel, landmask_pcr, missing_value_pcr, missing_value_landmask, coupled_HLOG_indices, couple_HLOG_2_HDYN, waterVolume_HDYN1D_2_HLOG_BMI)
 
-plt.figure(figsize=(16,8))
-plt.subplot(131)
-plt.title('initial channelStorage [m3]')
-plt.imshow(ini_channelStorage, vmax=np.max(ini_channelStorage))
-plt.colorbar(orientation='horizontal')
-plt.subplot(132)
-plt.title('waterVolume (1D) [m3]')
-plt.imshow(waterVolume_HDYN1D_2_HLOG_BMI, vmax=np.max(ini_channelStorage))
-plt.colorbar(orientation='horizontal')
-plt.subplot(133)
-plt.title('updated channelStorage [m3]')
-plt.imshow(hydrologicModel.get_var('channelStorage'), vmax=np.max(ini_channelStorage))
-plt.colorbar(orientation='horizontal')
+# plt.figure(figsize=(16,8))
+# plt.subplot(131)
+# plt.title('initial channelStorage [m3]')
+# plt.imshow(ini_channelStorage, vmax=np.max(ini_channelStorage))
+# plt.colorbar(orientation='horizontal')
+# plt.subplot(132)
+# plt.title('waterVolume (1D) [m3]')
+# plt.imshow(waterVolume_HDYN1D_2_HLOG_BMI, vmax=np.max(ini_channelStorage))
+# plt.colorbar(orientation='horizontal')
+# plt.subplot(133)
+# plt.title('updated channelStorage [m3]')
+# plt.imshow(hydrologicModel.get_var('channelStorage'), vmax=np.max(ini_channelStorage))
+# plt.colorbar(orientation='horizontal')
 #plt.savefig(os.path.join(verbose_folder,'iniAndUpdatedChannelStoragePCR.png'), dpi=300)
 
 
@@ -562,62 +558,62 @@ hydrologicModel.update(1)
 # In[36]:
 
 delta_volume_PCR, delta_volume_PCR_1way = model_functions.calculateDeltaVolumes(hydrologicModel,
-                                                                                missing_value_pcr, 
-                                                                                secPerDay, 
-                                                                                coupled_HLOG_indices, 
-                                                                                cellarea_data_pcr, 
+                                                                                missing_value_pcr,
+                                                                                secPerDay,
+                                                                                coupled_HLOG_indices,
+                                                                                cellarea_data_pcr,
                                                                                 waterVolume_HDYN2D_2_HLOG_BMI)
 
 
 # In[37]:
 
-r = np.copy(hydrologicModel.get_var('landSurfaceRunoff'))
-r = r * cellarea_data_pcr
-r[r<=0.] = 0.
-Q = np.copy(hydrologicModel.get_var('discharge'))
-Q = Q*86400.
-Q[Q<=0.] = 0.
-
-plt.figure(figsize=(16,8))
-plt.subplot(131)
-plt.title('r from PCR [m3]')
-plt.imshow(r)
-plt.colorbar(orientation='horizontal')
-plt.subplot(132)
-plt.title('Q from PCR [m3]')
-plt.imshow(Q)
-plt.colorbar(orientation='horizontal')
-plt.subplot(133)
-plt.title('delta volume PCR [m3/d]')
-plt.imshow(delta_volume_PCR)
-plt.colorbar(orientation='horizontal')
+# r = np.copy(hydrologicModel.get_var('landSurfaceRunoff'))
+# r = r * cellarea_data_pcr
+# r[r<=0.] = 0.
+# Q = np.copy(hydrologicModel.get_var('discharge'))
+# Q = Q*86400.
+# Q[Q<=0.] = 0.
+#
+# plt.figure(figsize=(16,8))
+# plt.subplot(131)
+# plt.title('r from PCR [m3]')
+# plt.imshow(r)
+# plt.colorbar(orientation='horizontal')
+# plt.subplot(132)
+# plt.title('Q from PCR [m3]')
+# plt.imshow(Q)
+# plt.colorbar(orientation='horizontal')
+# plt.subplot(133)
+# plt.title('delta volume PCR [m3/d]')
+# plt.imshow(delta_volume_PCR)
+# plt.colorbar(orientation='horizontal')
 
 
 # In[38]:
 
-delta_water_DFM_1way, verbose_volume_DFM_1way = model_functions.calculateDeltaWater(hydrodynamicModel, 
-                                                                                    couple_HDYN_2_HLOG, 
+delta_water_DFM_1way, verbose_volume_DFM_1way = model_functions.calculateDeltaWater(hydrodynamicModel,
+                                                                                    couple_HDYN_2_HLOG,
                                                                                     couple_HLOG_2_HDYN,
                                                                                     coupled_HLOG_indices,
-                                                                                    delta_volume_PCR_1way, 
-                                                                                    cellAreaSpherical_1D, 
-                                                                                    fraction_timestep, 
-                                                                                    model_type, 
+                                                                                    delta_volume_PCR_1way,
+                                                                                    cellAreaSpherical_1D,
+                                                                                    fraction_timestep,
+                                                                                    model_type,
                                                                                     use_Fluxes)
 
-model_functions.updateModel(hydrodynamicModel, 
-                            delta_water_DFM_1way, 
-                            update_step, 
-                            separator_1D, 
-                            use_Fluxes, 
-                            use_RFS, 
-                            model_type, 
+model_functions.updateModel(hydrodynamicModel,
+                            delta_water_DFM_1way,
+                            update_step,
+                            separator_1D,
+                            use_Fluxes,
+                            use_RFS,
+                            model_type,
                             verbose)
 
 
 # In[40]:
 
-execute_all = False
+execute_all = True
 
 
 # In[41]:
@@ -630,38 +626,40 @@ if execute_all == True:
         current_water_depth_1D = current_water_depth[separator_1D:]
         current_water_depth_2D = current_water_depth[:separator_1D]
 
-        inundatedArea_HDYN1D_2_HLOG,             inundatedArea_HDYN1D_2_HLOG_BMI = model_functions.determine_InundationArea1D_Hydrodynamics(couple_HLOG_2_HDYN,
-                                                                                                       coupled_HLOG_indices,
-                                                                                                       current_water_depth_1D,
-                                                                                                       threshold_inundated_depth,
-                                                                                                       cellAreaSpherical_1D,
-                                                                                                       landmask_pcr)
+        inundatedArea_HDYN1D_2_HLOG,inundatedArea_HDYN1D_2_HLOG_BMI = model_functions.determine_InundationArea1D_Hydrodynamics(couple_HLOG_2_HDYN,
+                                                                                                       							coupled_HLOG_indices,
+                                                                                                       							current_water_depth_1D,
+                                                                                                       							threshold_inundated_depth,
+                                                                                                       							cellAreaSpherical_1D,
+																																cellarea_data_pcr,
+                                                                                                       							landmask_pcr)
 
-        inundatedArea_HDYN2D_2_HLOG,             inundatedArea_HDYN2D_2_HLOG_BMI,                 inundatedFraction_HDYN2D_2_HLOG,                     inundatedFraction_HDYN2D_2_HLOG_BMI = model_functions.determine_InundationArea2D_Hydrodynamics(couple_HLOG_2_HDYN_2way,
-                                                                                                                   coupled_HLOG_indices_2way,
-                                                                                                                   current_water_depth_2D,
-                                                                                                                   threshold_inundated_depth,
-                                                                                                                   cellAreaSpherical_2D,
-                                                                                                                   cellarea_data_pcr,
-                                                                                                                   landmask_pcr)
+        inundatedArea_HDYN2D_2_HLOG,inundatedArea_HDYN2D_2_HLOG_BMI,\
+			inundatedFraction_HDYN2D_2_HLOG,inundatedFraction_HDYN2D_2_HLOG_BMI = model_functions.determine_InundationArea2D_Hydrodynamics(couple_HLOG_2_HDYN_2way,
+                                                                                                                   							coupled_HLOG_indices_2way,
+                                                                                                                   							current_water_depth_2D,
+                                                                                                                   							threshold_inundated_depth,
+                                                                                                                   							cellAreaSpherical_2D,
+                                                                                                                   							cellarea_data_pcr,
+                                                                                                                   							landmask_pcr)
 
         current_water_volume = np.copy(hydrodynamicModel.get_var('vol1'))
         current_water_volume_1D = current_water_volume[separator_1D:]
         current_water_volume_2D = current_water_volume[:separator_1D]
 
-        waterVolume_HDYN1D_2_HLOG,            waterVolume_HDYN1D_2_HLOG_BMI,                waterDepth_HDYN1D_2_HLOG_BMI = model_functions.determine_inundationVolume_HDYN_1D(hydrologicModel,
-                                                                                                  inundatedArea_HDYN1D_2_HLOG,
-                                                                                                  current_water_volume_1D,
-                                                                                                  couple_HLOG_2_HDYN,
-                                                                                                  coupled_HLOG_indices, 
-                                                                                                  landmask_pcr)
+        waterVolume_HDYN1D_2_HLOG, waterVolume_HDYN1D_2_HLOG_BMI, waterDepth_HDYN1D_2_HLOG_BMI = model_functions.determine_inundationVolume_HDYN_1D(hydrologicModel,
+                                                                                                  													inundatedArea_HDYN1D_2_HLOG,
+                                                                                                  													current_water_volume_1D,
+                                                                                                  													couple_HLOG_2_HDYN,
+                                                                                                  													coupled_HLOG_indices,
+                                                                                                  													landmask_pcr)
 
-        waterVolume_HDYN2D_2_HLOG_BMI,            waterDepth_HDYN2D_2_HLOG_BMI = model_functions.determine_inundationVolume_HDYN_2D(current_water_volume_2D, 
-                                                                                              inundatedArea_HDYN2D_2_HLOG,
-                                                                                              waterVolume_HDYN1D_2_HLOG_BMI,
-                                                                                              couple_HLOG_2_HDYN_2way,
-                                                                                              coupled_HLOG_indices_2way,
-                                                                                              landmask_pcr)
+        waterVolume_HDYN2D_2_HLOG_BMI, waterDepth_HDYN2D_2_HLOG_BMI = model_functions.determine_inundationVolume_HDYN_2D(current_water_volume_2D,
+                                                                                              								inundatedArea_HDYN2D_2_HLOG,
+                                                                                              								waterVolume_HDYN1D_2_HLOG_BMI,
+                                                                                              								couple_HLOG_2_HDYN_2way,
+                                                                                              								coupled_HLOG_indices_2way,
+                                                                                              								landmask_pcr)
 
         ini_channelStorage = np.copy(hydrologicModel.get_var('channelStorage'))
 
@@ -679,29 +677,29 @@ if execute_all == True:
         hydrologicModel.update(1)
 
         delta_volume_PCR, delta_volume_PCR_1way = model_functions.calculateDeltaVolumes(hydrologicModel,
-                                                                                        missing_value_pcr, 
-                                                                                        secPerDay, 
-                                                                                        coupled_HLOG_indices, 
-                                                                                        cellarea_data_pcr, 
+                                                                                        missing_value_pcr,
+                                                                                        secPerDay,
+                                                                                        coupled_HLOG_indices,
+                                                                                        cellarea_data_pcr,
                                                                                         waterVolume_HDYN2D_2_HLOG_BMI)
 
-        delta_water_DFM_1way, verbose_volume_DFM_1way = model_functions.calculateDeltaWater(hydrodynamicModel, 
-                                                                                            couple_HDYN_2_HLOG, 
+        delta_water_DFM_1way, verbose_volume_DFM_1way = model_functions.calculateDeltaWater(hydrodynamicModel,
+                                                                                            couple_HDYN_2_HLOG,
                                                                                             couple_HLOG_2_HDYN,
                                                                                             coupled_HLOG_indices,
-                                                                                            delta_volume_PCR_1way, 
-                                                                                            cellAreaSpherical_1D, 
-                                                                                            fraction_timestep, 
-                                                                                            model_type, 
+                                                                                            delta_volume_PCR_1way,
+                                                                                            cellAreaSpherical_1D,
+                                                                                            fraction_timestep,
+                                                                                            model_type,
                                                                                             use_Fluxes)
 
-        model_functions.updateModel(hydrodynamicModel, 
-                                    delta_water_DFM_1way, 
-                                    update_step, 
-                                    separator_1D, 
-                                    use_Fluxes, 
-                                    use_RFS, 
-                                    model_type, 
+        model_functions.updateModel(hydrodynamicModel,
+                                    delta_water_DFM_1way,
+                                    update_step,
+                                    separator_1D,
+                                    use_Fluxes,
+                                    use_RFS,
+                                    model_type,
                                     verbose)
 
 
@@ -710,6 +708,3 @@ if execute_all == True:
 
 
 # In[ ]:
-
-
-
