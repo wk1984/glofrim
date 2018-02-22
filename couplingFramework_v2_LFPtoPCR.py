@@ -6,7 +6,6 @@
 # -------------------------------------------------------------------------------------------------
 # LOAD REQUIRED LIBRARIES
 # -------------------------------------------------------------------------------------------------
-get_ipython().magic(u'matplotlib inline')
 import netCDF4
 from distutils.util import strtobool
 import pylab
@@ -29,9 +28,7 @@ from model import pcrglobwb_bmi
 from model import disclaimer
 from coupling_PCR_FM_2way import coupling_functions
 from coupling_PCR_FM_2way import model_functions
-from coupling_PCR_FM_2way import utils
 from coupling_PCR_FM_2way import configuration
-# get_ipython().magic(u'config Application.log_level="INFO"')
 
 
 # In[2]:
@@ -123,7 +120,7 @@ if model_type == 'DFM':
     model_path = '/home/jannis/Programmes/DFLOWFM/lib/libdflowfm.so'
 
 elif model_type == 'LFP':
-    model_path = '/home/jannis/Programmes/LISFLOODFP/lisflood-bmi-v5.9/liblisflood.so'
+    model_path = '/nfs/home4/hoch/glofrim/glofrim/lisflood-bmi-v5.9/liblisflood.so'
 
 else:
     sys.exit('\nno adequate model defined in configuration file - define either DFM or LFP!\n')
