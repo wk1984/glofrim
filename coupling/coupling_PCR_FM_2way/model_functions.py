@@ -182,7 +182,7 @@ def extractModelData_DFM(model, useRFS, use_2way):
 
 # =============================================================================
 
-def extractModelData_LFP(model, model_dir, verbose_folder, use_RFS, use_2way, verbose):
+def extractModelData_LFP(model, use_RFS, use_2way):
     """
     Extracting data by using BMI-command "get_var", and preparing it depending
     on model specification from initialized LISFLOOD-FP model to be used later in the model run.
@@ -205,7 +205,7 @@ def extractModelData_LFP(model, model_dir, verbose_folder, use_RFS, use_2way, ve
 
     # converting arrays to flattened array to be processed later
     # required since Delft3D DFM stores data in flattened arrays too
-    list_dA = grid_dA.ravel()
+    cellArea = grid_dA.ravel()
     bottom_lvl = DEM.ravel()
     waterDepth = H.ravel()
 
@@ -218,23 +218,26 @@ def extractModelData_LFP(model, model_dir, verbose_folder, use_RFS, use_2way, ve
         grid_x_coords[i, :] = BLx + (np.arange(cols) + 0.5) * dx
     for i in xrange(cols):
         grid_y_coords[:, i] = BLy + (np.arange(rows) + 0.5) * dy
+        
     # flipping array required since we start from bottom left
     grid_y_coords = np.flipud(grid_y_coords)
 
     # compute list with centre point coords of each LFP-cell to be coupled to PCR-GLOBWB
     # if RFS active, mask LFP-cells only to those with channel data and without missing values
+    
     if use_RFS == True:
         i, j = np.where(np.logical_and(SGCwidth > 0., DEM != -9999))
         list_x_coords = grid_x_coords[i, j]
         list_y_coords = grid_y_coords[i, j]
-        coupledFPindices = zip(i, j)
+        coupledFPindices_1way = zip(i, j)
     elif use_RFS == False:
-        i, j = np.where(DEM != -9999)
+        i, j = np.where(np.logical_and(SGCwidth <= 0., DEM != -9999))
         list_x_coords = grid_x_coords[i, j]
         list_y_coords = grid_y_coords[i, j]
-        coupledFPindices = zip(i, j)
+        coupledFPindices_1way = zip(i, j)
+        
     if use_2way == True:
-        i, j = np.where(DEM != -9999)
+        i, j = np.where(np.logical_and(SGCwidth <= 0., DEM != -9999))
         list_x_coords_2way = grid_x_coords[i, j]
         list_y_coords_2way = grid_y_coords[i, j]
         coupledFPindices_2way = zip(i, j)
@@ -243,27 +246,7 @@ def extractModelData_LFP(model, model_dir, verbose_folder, use_RFS, use_2way, ve
 		list_y_coords_2way = []
 		coupledFPindices_2way = []
 
-    # print and save verbose output
-    if verbose == True:
-        print 'x, y of corners of overall grid'
-        for i in (0,-1):
-            for j in (0,-1):
-                print grid_x_coords[i, j], grid_y_coords[i, j]
-        print 'rows', rows
-        print 'cols', cols
-        print 'number coupled FP-cells 1-D: ', len(coupledFPindices)
-        print 'number coupled FP-cells 2-D: ', len(coupledFPindices_2way)
-        fig = plt.figure()
-        plt.imshow(np.ma.masked_outside(DEM, -1000,1000), cmap='terrain')
-        plt.colorbar()
-        plt.savefig(os.path.join(verbose_folder, 'DEM.png'))
-        plt.close(fig)
-
-    separator_1D = 0. # setting separator between 1-D and 2-D to 0 as only used for DFM
-
-    return dx, dy, DEM, bottom_lvl, H, waterDepth, rows, cols, \
-                list_x_coords, list_x_coords_2way, list_y_coords, list_y_coords_2way, coupledFPindices, coupledFPindices_2way, \
-                                                                                        grid_dA, list_dA, SGCQin, separator_1D
+    return DEM, bottom_lvl, cellArea, SGCQin, list_x_coords, list_y_coords, list_x_coords_2way, list_y_coords_2way, dx, dy
 
 # =============================================================================
 

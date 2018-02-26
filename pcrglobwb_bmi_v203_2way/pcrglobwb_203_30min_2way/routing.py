@@ -1303,6 +1303,12 @@ class Routing(object):
             
             # discharge (m3/s) based on kinematic wave approximation
             #logger.info('start pcr.kinematic')
+            
+ #           TESTmap = pcr2numpy(self.lddMap, -999)
+ #           import matplotlib.pyplot as plt
+ #           plt.imshow(TESTmap)
+ #           import pdb; pdb.set_trace()
+            
             self.subDischarge = pcr.kinematic(self.lddMap, dischargeInitial, 0.0, 
                                               alpha, self.beta, \
                                               1, length_of_sub_time_step, self.cellLengthFD)
