@@ -25,6 +25,7 @@ enum VARIABLE_LABEL {
   dA,
   SGCwidth,
   SGCQin,
+  SGCQz,
   blx,
   bly,
   BC_numPS,
@@ -46,6 +47,7 @@ VARIABLE_LABEL variable2label (std::string const& variable) {
   if (variable == "dA") return dA;
   if (variable == "SGCwidth") return SGCwidth;
   if (variable == "SGCQin") return SGCQin;
+  if (variable == "SGCQz") return SGCQz;
   if (variable == "blx") return blx;
   if (variable == "bly") return bly;
   if (variable == "BC.numPS") return BC_numPS;
@@ -165,6 +167,10 @@ extern "C" {
       *ptr = (void*)(Arrptr->SGCQin);
       break;
     }
+    case SGCQz: {
+      *ptr = (void*)(Arrptr->SGCQz);
+      break;
+    }
     case blx: {
       *ptr = &(Parptr->blx);
       break;
@@ -203,6 +209,7 @@ extern "C" {
     case dA:
     case SGCwidth:
     case SGCQin:
+    case SGCQz:
     case rain:
     {
       *rank = 2;
@@ -239,6 +246,7 @@ extern "C" {
     case dA:
     case SGCwidth:
     case SGCQin:
+    case SGCQz:
     case Qx:
     case Qy:
     case rain:
@@ -283,6 +291,7 @@ extern "C" {
     case dA:
     case SGCwidth:
     case SGCQin:
+    case SGCQz:
     case blx:
     case bly:
     {
