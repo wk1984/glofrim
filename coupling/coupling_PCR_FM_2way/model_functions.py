@@ -190,15 +190,16 @@ def extractModelData_LFP(model, use_RFS, use_2way):
     correct data type declaration.
     """
 
-    BLx                      = model.get_var('blx') 			# x-coord of bottom left corner of grid
-    BLy                      = model.get_var('bly') 			# y-coord of bottom left corner of grid
-    dx                       = model.get_var('dx') 				# incremental distance in x-direction
-    dy                       = model.get_var('dy') 				# incremental distance in y-direction
-    grid_dA                  = model.get_var('dA') 				# if lat/lon: array with cell area values; else: one uniform value
-    DEM                      = model.get_var('DEM') 			# array with surface elevation values
-    H                        = model.get_var('H') 				# array with water depth values
-    SGCwidth                 = model.get_var('SGCwidth') 		# array with water depth values
-    SGCQin                   = model.get_var('SGCQin') 			# array with discharge to be added to model (better than changing H)
+    BLx                      = np.copy(model.get_var('blx')) 			# x-coord of bottom left corner of grid
+    BLy                      = np.copy(model.get_var('bly')) 			# y-coord of bottom left corner of grid
+    dx                       = np.copy(model.get_var('dx')) 				# incremental distance in x-direction
+    dy                       = np.copy(model.get_var('dy')) 				# incremental distance in y-direction
+    grid_dA                  = np.copy(model.get_var('dA')) 				# if lat/lon: array with cell area values; else: one uniform value
+    DEM                      = np.copy(model.get_var('DEM')) 			# array with surface elevation values
+    H                        = np.copy(model.get_var('H')) 				# array with water depth values
+    SGCwidth                 = np.copy(model.get_var('SGCwidth')) 		# array with water depth values
+    SGCQin                   = np.copy(model.get_var('SGCQin')) 			# array with discharge to be added to model (better than changing H)
+    SGCz                     = np.copy(model.get_var('SGCz'))
 
     # getting dimensions of model grid
     rows, cols = DEM.shape
@@ -218,35 +219,37 @@ def extractModelData_LFP(model, use_RFS, use_2way):
         grid_x_coords[i, :] = BLx + (np.arange(cols) + 0.5) * dx
     for i in xrange(cols):
         grid_y_coords[:, i] = BLy + (np.arange(rows) + 0.5) * dy
-        
+
     # flipping array required since we start from bottom left
     grid_y_coords = np.flipud(grid_y_coords)
 
     # compute list with centre point coords of each LFP-cell to be coupled to PCR-GLOBWB
     # if RFS active, mask LFP-cells only to those with channel data and without missing values
-    
-    if use_RFS == True:
-        i, j = np.where(np.logical_and(SGCwidth > 0., DEM != -9999))
-        list_x_coords = grid_x_coords[i, j]
-        list_y_coords = grid_y_coords[i, j]
-        coupledFPindices_1way = zip(i, j)
-    elif use_RFS == False:
-        i, j = np.where(np.logical_and(SGCwidth <= 0., DEM != -9999))
-        list_x_coords = grid_x_coords[i, j]
-        list_y_coords = grid_y_coords[i, j]
-        coupledFPindices_1way = zip(i, j)
-        
-    if use_2way == True:
-        i, j = np.where(np.logical_and(SGCwidth <= 0., DEM != -9999))
-        list_x_coords_2way = grid_x_coords[i, j]
-        list_y_coords_2way = grid_y_coords[i, j]
-        coupledFPindices_2way = zip(i, j)
-    elif use_2way == False:
-		list_x_coords_2way = []
-		list_y_coords_2way = []
-		coupledFPindices_2way = []
 
-    return DEM, bottom_lvl, cellArea, SGCQin, list_x_coords, list_y_coords, list_x_coords_2way, list_y_coords_2way, dx, dy
+    if use_RFS == True:
+        i_1d, j_1d = np.where(np.logical_and(SGCwidth > 0., DEM != 1.00000000e+10, DEM != -9999))
+        list_x_coords = grid_x_coords[i_1d, j_1d]
+        list_y_coords = grid_y_coords[i_1d, j_1d]
+        coupledFPindices_1way = zip(i_1d, j_1d)
+    elif use_RFS == False:
+        i_1d, j_1d = np.where(np.logical_and(SGCwidth <= 0., DEM != 1.00000000e+10, DEM != -9999))
+        list_x_coords = grid_x_coords[i_1d, j_1d]
+        list_y_coords = grid_y_coords[i_1d, j_1d]
+        coupledFPindices_1way = zip(i_1d, j_1d)
+
+    if use_2way == True:
+        i_2d, j_2d = np.where(np.logical_and(SGCwidth <= 0., DEM != 1.00000000e+10, DEM != -9999))
+        list_x_coords_2way = grid_x_coords[i_2d, j_2d]
+        list_y_coords_2way = grid_y_coords[i_2d, j_2d]
+        coupledFPindices_2way = zip(i_2d, j_2d)
+    elif use_2way == False:
+        i_2d = []
+        j_2d = []
+        list_x_coords_2way = []
+        list_y_coords_2way = []
+        coupledFPindices_2way = []
+
+    return DEM, grid_dA, SGCQin, SGCwidth, SGCz, list_x_coords, list_y_coords, list_x_coords_2way, list_y_coords_2way, i_1d, j_1d, i_2d, j_2d, dx, dy
 
 # =============================================================================
 
@@ -633,9 +636,9 @@ def calculateDeltaVolumes(model_pcr, missing_value_pcr, secPerDay, CoupledPCRcel
 #    model_pcr.update(1)
 
     #- retrieve data from PCR-GLOBWB
-#    current_discharge_pcr  = np.copy(model_pcr.get_var('discharge'))
-    current_runoff_pcr     = np.copy(model_pcr.get_var('landSurfaceRunoff'))
-    current_discharge_pcr = np.zeros_like(current_runoff_pcr)
+    current_discharge_pcr  = np.copy(model_pcr.get_var('discharge'))
+    # current_runoff_pcr     = np.copy(model_pcr.get_var('landSurfaceRunoff'))
+    current_runoff_pcr = np.zeros_like(current_discharge_pcr)
 
     # Step 1: convert everything to m3/d and set missing values to zero
     water_volume_PCR_rivers = current_discharge_pcr * secPerDay
