@@ -275,7 +275,7 @@ if model_type == 'LFP':
 
 bottomElevation_HDYN1D_2_HLOG_BMI = model_functions.determine_bottomElev1D_Hydrodynamics(couple_HLOG_2_HDYN,
                                                                                          coupled_HLOG_indices,
-                                                                                         bottom_lvl_1d,
+                                                                                         bottom_lvl_1D,
                                                                                          landmask_pcr)
 
 # plt.figure(figsize=(16,8))
