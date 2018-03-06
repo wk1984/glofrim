@@ -42,11 +42,11 @@ from coupling_PCR_FM_2way import configuration
 # -------------------------------------------------------------------------------------------------
 
 # arg = r'/home/jannis/PhD/scripts/2WAY/2way_AMA_1d2d_codeDevelopment.ini'
-arg = r'/home/jannis/PhD/scripts/2WAY/2way_AMA_1d2d_codeDevelopment_LFP.ini'
+#arg = r'/home/jannis/PhD/scripts/2WAY/2way_AMA_1d2d_codeDevelopment_LFP.ini'
 
 config = configuration.Configuration()
-#config.parse_configuration_file(sys.argv[1])
-config.parse_configuration_file(arg)
+config.parse_configuration_file(sys.argv[1])
+#config.parse_configuration_file(arg)
 
 
 # In[3]:
@@ -123,7 +123,7 @@ LDD                 = os.path.join(inputDIR, configPCR.routingOptions['lddMap'])
 
 # these may be changed according to personal file and folder structure
 if model_type == 'DFM':
-    model_path = '/home/jannis/Programmes/DFLOWFM/lib/libdflowfm.so'
+    model_path = '/u/hoch/programmes/DFLOWFM/lib/libdflowfm.so'
 
 elif model_type == 'LFP':
     model_path = '/home/jannis/Programmes/LISFLOODFP/lisflood-bmi-v5.9/liblisflood.so'
