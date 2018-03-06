@@ -270,8 +270,8 @@ newLDD = model_functions.noLDD(hydrologicModel, coupled_HLOG_indices, verbose_fo
 # In[14]:
 
 if model_type == 'LFP':
-    bottom_lvl_1d = SGCz[i_1d,j_1d]
-    bottom_lvl_2d = SGCz[i_2d,j_2d]
+    bottom_lvl_1D = SGCz[i_1d,j_1d]
+    bottom_lvl_2D = SGCz[i_2d,j_2d]
 
 bottomElevation_HDYN1D_2_HLOG_BMI = model_functions.determine_bottomElev1D_Hydrodynamics(couple_HLOG_2_HDYN,
                                                                                          coupled_HLOG_indices,
