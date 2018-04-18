@@ -1,16 +1,33 @@
-
 # coding: utf-8
+"""
 
-# In[1]:
+GLOFRIM 2.0
+
+This script executes the 2way coupling between large-scale hydrology (PCR-GLOBWB) and hydrodynamics (Delft3D FM or LISFLOODFP).
+It requires two files with information about the coupling settings and the paths to the models in each specific environmentself.
+
+As such, the script should be executed likeL
+    python couplingFramework_v2_LFPtoPCR.py settingsFile.set paths.env
+
+Further information can be found on GitHub or by contacting the author.
+
+Author: Jannis Hoch, M.Sc.
+Mail: j.m.hoch@uu.nl
+Institute: Utrecht University / Deltares
+
+(C) 2018
+
+"""
 
 # -------------------------------------------------------------------------------------------------
 # LOAD REQUIRED LIBRARIES
 # -------------------------------------------------------------------------------------------------
-# get_ipython().magic(u'matplotlib inline')
+
 import netCDF4
 from distutils.util import strtobool
 import pylab
 import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import pcraster as pcr
 import sys
@@ -22,9 +39,6 @@ import datetime
 import pdb
 import time
 import bmi.wrapper
-# import pcrglobwb_203_30min_2way as pcrglobwb_bmi_v203
-# from pcrglobwb_203_30min_2way import pcrglobwb_bmi
-# from pcrglobwb_203_30min_2way import disclaimer
 import model as pcrglobwb_bmi_v203
 from model import pcrglobwb_bmi
 from model import disclaimer
@@ -32,24 +46,13 @@ from coupling_PCR_FM_2way import coupling_functions
 from coupling_PCR_FM_2way import model_functions
 from coupling_PCR_FM_2way import utils
 from coupling_PCR_FM_2way import configuration
-# get_ipython().magic(u'config Application.log_level="INFO"')
-
-
-# In[2]:
 
 # -------------------------------------------------------------------------------------------------
 # IMPORT MODEL SETTINGS FROM INI-FILE/SET-FILE
 # -------------------------------------------------------------------------------------------------
 
-# arg = r'/home/jannis/PhD/scripts/2WAY/2way_AMA_1d2d_codeDevelopment.ini'
-#arg = r'/home/jannis/PhD/scripts/2WAY/2way_AMA_1d2d_codeDevelopment_LFP.ini'
-
 config = configuration.Configuration()
 config.parse_configuration_file(sys.argv[1])
-#config.parse_configuration_file(arg)
-
-
-# In[3]:
 
 # -------------------------------------------------------------------------------------------------
 # SPECIFY MODEL SETTINGS
@@ -73,9 +76,6 @@ verbose = strtobool(config.general_settings['verbose'])
 
 couple_channelStorage = True
 
-
-# In[4]:
-
 # -------------------------------------------------------------------------------------------------
 # SPECIFY NUMERICAL SETTINGS
 # -------------------------------------------------------------------------------------------------
@@ -92,9 +92,6 @@ threshold_inundated_depth             = float(config.numerical_settings['thresho
 # other
 missing_value_landmask                = 255
 missing_value_pcr                     = -999
-
-
-# In[5]:
 
 # -------------------------------------------------------------------------------------------------
 # SET PATHS TO MODELS
@@ -114,25 +111,22 @@ clone_pcr 			= os.path.join(inputDIR, configPCR.globalOptions['cloneMap'])
 landmask_pcr 		= os.path.join(inputDIR, configPCR.globalOptions['landmask'])
 LDD                 = os.path.join(inputDIR, configPCR.routingOptions['lddMap'])
 
-
-# In[6]:
-
 # -------------------------------------------------------------------------------------------------
 # SET PATHS TO .SO / .DLL FILES
 # -------------------------------------------------------------------------------------------------
 
+configPaths = configuration.Configuration()
+configPaths.parse_configuration_file(sys.argv[2])
+
 # these may be changed according to personal file and folder structure
 if model_type == 'DFM':
-    model_path = '/u/hoch/programmes/DFLOWFM/lib/libdflowfm.so'
+    model_path = configPaths.paths['DFM_path']
 
 elif model_type == 'LFP':
-    model_path = '/home/jannis/Programmes/LISFLOODFP/lisflood-bmi-v5.9/liblisflood.so'
+    model_path = configPaths.paths['LFP_path']
 
 else:
     sys.exit('\nno adequate model defined in configuration file - define either DFM or LFP!\n')
-
-
-# In[7]:
 
 # -------------------------------------------------------------------------------------------------
 # INITIALIZE AND SPIN-UP PCR-GLOBWB
@@ -151,9 +145,6 @@ print '\n>>> PCR Initialized <<<\n'
 # spin-up PCR-GLOBWB
 hydrologicModel.spinup()
 
-
-# In[8]:
-
 # -------------------------------------------------------------------------------------------------
 # INITIALIZING HYDRODYNAMIC MODEL
 # -------------------------------------------------------------------------------------------------
@@ -163,13 +154,11 @@ hydrodynamicModel = bmi.wrapper.BMIWrapper(engine = model_path, configfile = (os
 hydrodynamicModel.initialize()
 print '\n>>> ',model_type,' Initialized <<<\n'
 
-
-# In[9]:
-
 # -------------------------------------------------------------------------------------------------
 # EXCTRACTING RELEVANT DATA FROM MODELS
 # -------------------------------------------------------------------------------------------------
 
+#- from Delft3D FM
 if model_type == 'DFM':
 
     #- retrieving data from Delft3D FM
@@ -179,46 +168,58 @@ if model_type == 'DFM':
 
     print '\n>>> DFM data retrieved <<<\n'
 
+#- from LISFLOODFP
 elif model_type == 'LFP':
 
     #- retrieving data from LISFLOOD-FP
-    DEM, cellArea, SGCQin, SGCwidth, SGCz, list_x_coords, list_y_coords, list_x_coords_2way,         list_y_coords_2way, i_1d, j_1d, i_2d, j_2d, dx, dy  = model_functions.extractModelData_LFP(hydrodynamicModel,
-                                                                                                  use_RFS,
-                                                                                                  use_2way)
+    DEM, cellArea, SGCQin, SGCwidth, SGCz, \
+        list_x_coords, list_y_coords, \
+        list_x_coords_2way, list_y_coords_2way, \
+        i_1d, j_1d, \
+        i_2d, j_2d, \
+        dx, dy  = model_functions.extractModelData_LFP(hydrodynamicModel, use_RFS, use_2way)
 
+    #- construct coords of vertices from midpoint coords and grid resolution
     hydrodynamic_coords_1D = coupling_functions.getVerticesFromMidPoints(list_x_coords, list_y_coords, dx, dy, verbose)
     hydrodynamic_coords_2D = coupling_functions.getVerticesFromMidPoints(list_x_coords_2way, list_y_coords_2way, dx, dy, verbose)
 
+    #- construcut arrays with indices pointing to 1way/2way coupled LFP cells in a 2D grid
     coupledFPindices_1way = zip(i_1d, j_1d)
     coupledFPindices_2way = zip(i_2d, j_2d)
+
+    #- align LFP with DFM
+    bottom_lvl_1D = SGCz[i_1d,j_1d]
+    bottom_lvl_2D = SGCz[i_2d,j_2d]
+    cellAreaSpherical_1D = cellArea[i_1d,j_1d]
+    cellAreaSpherical_2D = cellArea[i_2d,j_2d]
 
     separator_1D = 0.
 
     print '\n>>> LFP data retrieved <<<\n'
 
-#- computing PCR-coordinates
+#- from PCR-GLOBWB
 cellarea_data_pcr, landmask_data_pcr, clone_data_pcr = model_functions.extractModelData_PCR(hydrologicModel,
                                                                                             landmask_pcr,
                                                                                             clone_pcr)
 PCRcoords = coupling_functions.getPCRcoords(landmask_data_pcr)
 print '\n>>> PCR data retrieved <<<\n'
 
+# -------------------------------------------------------------------------------------------------
+# PLOT LFP DEM, CHANNEL DEPTH, CHANNEL WIDTH
+# -------------------------------------------------------------------------------------------------
 
-# In[10]:
-
-# if model_type == 'LFP':
-#     plt.figure(figsize=(16,8))
-#     plt.imshow(DEM, vmax=200)
-#     plt.colorbar()
-#     plt.figure(figsize=(16,8))
-#     plt.imshow(SGCz, vmax=200)
-#     plt.colorbar()
-#     plt.figure(figsize=(16,8))
-#     plt.imshow(SGCwidth, vmax=500)
-#     plt.colorbar()
-
-
-# In[11]:
+if model_type == 'LFP':
+    plt.figure(figsize=(16,8))
+    plt.subplot(131)
+    plt.imshow(DEM, vmax=200)
+    plt.colorbar()
+    plt.subplot(132)
+    plt.imshow(SGCz, vmax=200)
+    plt.colorbar()
+    plt.subplot(133)
+    plt.imshow(SGCwidth, vmax=500)
+    plt.colorbar()
+    plt.savefig(os.path.join(verbose_folder, 'LFP_properties.png'), dpi=300)
 
 # -------------------------------------------------------------------------------------------------
 # ACTIVATING COUPLING FOR RELEVANT PCR SECTIONS
@@ -229,11 +230,9 @@ hydrologicModel.set_var(('forest','ActivateCoupling'), 'True') #2way
 hydrologicModel.set_var(('routing','ActivateCoupling'), 'True')
 hydrologicModel.set_var(('WaterBodies', 'ActivateCoupling'), 'True')
 
-
-# In[12]:
-
 # -------------------------------------------------------------------------------------------------
 # COUPLING THE GRIDS
+#TODO: think of more efficient ways to do this!!!
 # -------------------------------------------------------------------------------------------------
 
 # linking PCR-cells with 1D hydrodynamic cells (since use_RFS=True)
@@ -252,39 +251,9 @@ couple_HDYN_2_HLOG_2way, couple_HLOG_2_HDYN_2way, coupled_HLOG_indices_2way = co
 print len(hydrodynamic_coords_2D)
 print len(couple_HDYN_2_HLOG_2way)
 
-
-# In[13]:
-
 # -------------------------------------------------------------------------------------------------
-# TURNING OFF ROUTING BY PCR IN COUPLED AREA
+# EXTRACT CURRENT WATER DEPTH AND ASSIGNT TO 1D OR 2D CELLS
 # -------------------------------------------------------------------------------------------------
-
-newLDD = model_functions.noLDD(hydrologicModel, coupled_HLOG_indices, verbose_folder, verbose)
-
-# plt.figure()
-# plt.imshow(newLDD)
-# plt.colorbar()
-#plt.savefig(os.path.join(verbose_folder,'coupledLDD.png'), dpi=300)
-
-
-# In[14]:
-
-if model_type == 'LFP':
-    bottom_lvl_1D = SGCz[i_1d,j_1d]
-    bottom_lvl_2D = SGCz[i_2d,j_2d]
-
-bottomElevation_HDYN1D_2_HLOG_BMI = model_functions.determine_bottomElev1D_Hydrodynamics(couple_HLOG_2_HDYN,
-                                                                                         coupled_HLOG_indices,
-                                                                                         bottom_lvl_1D,
-                                                                                         landmask_pcr)
-
-# plt.figure(figsize=(16,8))
-# plt.title('upscaled 1D bottom level elevation [m+NN] ' + str(model_type))
-# plt.imshow(bottomElevation_HDYN1D_2_HLOG_BMI, vmax=100)
-# plt.colorbar()
-
-
-# In[15]:
 
 if model_type == 'DFM':
     current_water_depth = hydrodynamicModel.get_var('s1') - hydrodynamicModel.get_var('bl')
@@ -294,13 +263,13 @@ elif model_type == 'LFP':
     current_water_depth = np.copy(hydrodynamicModel.get_var('H'))
     current_water_depth_1D = current_water_depth[i_1d,j_1d]
     current_water_depth_2D = current_water_depth[i_2d,j_2d]
-    cellAreaSpherical_1D = cellArea[i_1d,j_1d]
-    cellAreaSpherical_2D = cellArea[i_2d,j_2d]
 
+# -------------------------------------------------------------------------------------------------
+# DETERMINE INUNDATION AREA OF 1D CELLS
+# -------------------------------------------------------------------------------------------------
 
-# In[16]:
-
-inundatedArea_HDYN1D_2_HLOG,     inundatedArea_HDYN1D_2_HLOG_BMI = model_functions.determine_InundationArea1D_Hydrodynamics(couple_HLOG_2_HDYN,
+inundatedArea_HDYN1D_2_HLOG,\
+    inundatedArea_HDYN1D_2_HLOG_BMI = model_functions.determine_InundationArea1D_Hydrodynamics(couple_HLOG_2_HDYN,
                                                                                                coupled_HLOG_indices,
                                                                                                current_water_depth_1D,
                                                                                                threshold_inundated_depth,
@@ -308,10 +277,14 @@ inundatedArea_HDYN1D_2_HLOG,     inundatedArea_HDYN1D_2_HLOG_BMI = model_functio
                                                                                                cellarea_data_pcr,
                                                                                                landmask_pcr)
 
+# -------------------------------------------------------------------------------------------------
+# DETERMINE INUNDATION AREA AND INUNDATED AREA FRACTION OF 2D CELLS
+# -------------------------------------------------------------------------------------------------
 
-# In[17]:
-
-inundatedArea_HDYN2D_2_HLOG,     inundatedArea_HDYN2D_2_HLOG_BMI,         inundatedFraction_HDYN2D_2_HLOG,             inundatedFraction_HDYN2D_2_HLOG_BMI = model_functions.determine_InundationArea2D_Hydrodynamics(couple_HLOG_2_HDYN_2way,
+inundatedArea_HDYN2D_2_HLOG,\
+    inundatedArea_HDYN2D_2_HLOG_BMI,\
+        inundatedFraction_HDYN2D_2_HLOG,\
+            inundatedFraction_HDYN2D_2_HLOG_BMI = model_functions.determine_InundationArea2D_Hydrodynamics(couple_HLOG_2_HDYN_2way,
                                                                                                            coupled_HLOG_indices_2way,
                                                                                                            current_water_depth_2D,
                                                                                                            threshold_inundated_depth,
@@ -319,26 +292,28 @@ inundatedArea_HDYN2D_2_HLOG,     inundatedArea_HDYN2D_2_HLOG_BMI,         inunda
                                                                                                            cellarea_data_pcr,
                                                                                                            landmask_pcr)
 
+# -------------------------------------------------------------------------------------------------
+# PLOT
+# -------------------------------------------------------------------------------------------------
 
-# In[18]:
+plt.figure(figsize=(16,8))
+plt.subplot(131)
+plt.title('inundatedArea (1D) [m2]')
+plt.imshow(inundatedArea_HDYN1D_2_HLOG_BMI, vmax=np.max(inundatedArea_HDYN1D_2_HLOG_BMI))
+plt.colorbar(orientation='horizontal')
+plt.subplot(132)
+plt.title('inundatedArea (2D) [m2]')
+plt.imshow(inundatedArea_HDYN2D_2_HLOG_BMI, vmax=np.max(inundatedArea_HDYN1D_2_HLOG_BMI))
+plt.colorbar(orientation='horizontal')
+plt.subplot(133)
+plt.title('inundatedFraction (2D) [m2/m2]')
+plt.imshow(inundatedFraction_HDYN2D_2_HLOG_BMI, vmin=0, vmax=1)
+plt.colorbar(orientation='horizontal')
+plt.savefig(os.path.join(verbose_folder,'inundatedAreaAndFraction_HDYN_2_HLOG_BMI.png'), dpi=300)
 
-# plt.figure(figsize=(16,8))
-# plt.subplot(131)
-# plt.title('inundatedArea (1D) [m2]')
-# plt.imshow(inundatedArea_HDYN1D_2_HLOG_BMI)
-# plt.colorbar(orientation='horizontal')
-# plt.subplot(132)
-# plt.title('inundatedArea (2D) [m2]')
-# plt.imshow(inundatedArea_HDYN2D_2_HLOG_BMI, vmax=np.max(inundatedArea_HDYN1D_2_HLOG_BMI))
-# plt.colorbar(orientation='horizontal')
-# plt.subplot(133)
-# plt.title('inundatedFraction (2D) [m2/m2]')
-# plt.imshow(inundatedFraction_HDYN2D_2_HLOG_BMI, vmin=0, vmax=1)
-# plt.colorbar(orientation='horizontal')
-#plt.savefig(os.path.join(verbose_folder,'inundatedAreaAndFraction_HDYN_2_HLOG_BMI.png'), dpi=300)
-
-
-# In[19]:
+# -------------------------------------------------------------------------------------------------
+# EXTRACT CURRENT WATER VOLUME AND ASSIGNT TO 1D OR 2D CELLS
+# -------------------------------------------------------------------------------------------------
 
 if model_type == 'DFM':
     current_water_volume = np.copy(hydrodynamicModel.get_var('vol1')) # all hydrodyancmi cells
@@ -349,52 +324,58 @@ elif model_type == 'LFP':
     current_water_volume_1D = current_water_volume[i_1d, j_1d]
     current_water_volume_2D = current_water_volume[i_2d, j_2d]
 
+# -------------------------------------------------------------------------------------------------
+# DETERMINE INUNDATION VOLUME AND DEPTH OF 1D CELLS
+#TODO: remove depth, that's not required anymore for 1D
+# -------------------------------------------------------------------------------------------------
 
-# In[20]:
-
-waterVolume_HDYN1D_2_HLOG,    waterVolume_HDYN1D_2_HLOG_BMI,        waterDepth_HDYN1D_2_HLOG_BMI = model_functions.determine_inundationVolume_HDYN_1D(hydrologicModel,
+waterVolume_HDYN1D_2_HLOG,\
+    waterVolume_HDYN1D_2_HLOG_BMI,\
+        waterDepth_HDYN1D_2_HLOG_BMI = model_functions.determine_inundationVolume_HDYN_1D(hydrologicModel,
                                                                                           inundatedArea_HDYN1D_2_HLOG,
                                                                                           current_water_volume_1D,
                                                                                           couple_HLOG_2_HDYN,
                                                                                           coupled_HLOG_indices,
                                                                                           landmask_pcr)
 
+# -------------------------------------------------------------------------------------------------
+# DETERMINE INUNDATION VOLUME AND DEPTH OF 2D CELLS
+# -------------------------------------------------------------------------------------------------
 
-# In[21]:
-
-waterVolume_HDYN2D_2_HLOG_BMI,    waterDepth_HDYN2D_2_HLOG_BMI = model_functions.determine_inundationVolume_HDYN_2D(current_water_volume_2D,
+waterVolume_HDYN2D_2_HLOG_BMI,\
+    waterDepth_HDYN2D_2_HLOG_BMI = model_functions.determine_inundationVolume_HDYN_2D(current_water_volume_2D,
                                                                                       inundatedArea_HDYN2D_2_HLOG,
                                                                                       waterVolume_HDYN1D_2_HLOG_BMI,
                                                                                       couple_HLOG_2_HDYN_2way,
                                                                                       coupled_HLOG_indices_2way,
                                                                                       landmask_pcr)
 
+# -------------------------------------------------------------------------------------------------
+# PLOT
+# -------------------------------------------------------------------------------------------------
 
-# In[22]:
+plt.figure(figsize=(16,8))
+plt.subplot(141)
+plt.title('waterVolume (1D) [m3]')
+plt.imshow(waterVolume_HDYN1D_2_HLOG_BMI)
+plt.colorbar(orientation='horizontal')
+plt.subplot(142)
+plt.title('waterDepth (1D) [m3]')
+plt.imshow(waterDepth_HDYN1D_2_HLOG_BMI)
+plt.colorbar(orientation='horizontal')
+plt.subplot(143)
+plt.title('waterVolume (2D) [m3]')
+plt.imshow(waterVolume_HDYN2D_2_HLOG_BMI)
+plt.colorbar(orientation='horizontal')
+plt.subplot(144)
+plt.title('waterDepth (2D) [m]')
+plt.imshow(waterDepth_HDYN2D_2_HLOG_BMI)
+plt.colorbar(orientation='horizontal')
+plt.savefig(os.path.join(verbose_folder,'inundatedVolumeAndDepth_HDYN_2_HLOG_BMI.png'), dpi=300)
 
-# plt.figure(figsize=(16,8))
-# plt.subplot(141)
-# plt.title('waterVolume (1D) [m3]')
-# plt.imshow(waterVolume_HDYN1D_2_HLOG_BMI)
-# plt.colorbar(orientation='horizontal')
-# plt.subplot(142)
-# plt.title('waterDepth (1D) [m3]')
-# plt.imshow(waterDepth_HDYN1D_2_HLOG_BMI)
-# plt.colorbar(orientation='horizontal')
-# plt.subplot(143)
-# plt.title('waterVolume (2D) [m3]')
-# plt.imshow(waterVolume_HDYN2D_2_HLOG_BMI)
-# plt.colorbar(orientation='horizontal')
-# plt.subplot(144)
-# plt.title('waterDepth (2D) [m]')
-# plt.imshow(waterDepth_HDYN2D_2_HLOG_BMI)
-# plt.colorbar(orientation='horizontal')
-#plt.savefig(os.path.join(verbose_folder,'inundatedVolumeAndDepth_HDYN_2_HLOG_BMI.png'), dpi=300)
-
-
-# In[23]:
-
-ini_channelStorage = np.copy(hydrologicModel.get_var('channelStorage'))
+# -------------------------------------------------------------------------------------------------
+# PLOT
+# -------------------------------------------------------------------------------------------------
 
 if couple_channelStorage == False:
     waterVolume_HDYN1D_2_HLOG_BMI = np.zeros_like(waterVolume_HDYN2D_2_HLOG_BMI)
@@ -402,22 +383,24 @@ if couple_channelStorage == False:
 model_functions.updateStorage(hydrologicModel, landmask_pcr, missing_value_pcr, missing_value_landmask, coupled_HLOG_indices, couple_HLOG_2_HDYN, waterVolume_HDYN1D_2_HLOG_BMI)
 
 
-# In[24]:
+# -------------------------------------------------------------------------------------------------
+# PLOT
+# -------------------------------------------------------------------------------------------------
 
-# plt.figure(figsize=(16,8))
-# plt.subplot(131)
-# plt.title('initial channelStorage [m3]')
-# plt.imshow(ini_channelStorage, vmax=np.max(ini_channelStorage))
-# plt.colorbar(orientation='horizontal')
-# plt.subplot(132)
-# plt.title('waterVolume (1D) [m3]')
-# plt.imshow(waterVolume_HDYN1D_2_HLOG_BMI, vmax=np.max(ini_channelStorage))
-# plt.colorbar(orientation='horizontal')
-# plt.subplot(133)
-# plt.title('updated channelStorage [m3]')
-# plt.imshow(hydrologicModel.get_var('channelStorage'), vmax=np.max(ini_channelStorage))
-# plt.colorbar(orientation='horizontal')
-#plt.savefig(os.path.join(verbose_folder,'iniAndUpdatedChannelStoragePCR.png'), dpi=300)
+plt.figure(figsize=(16,8))
+plt.subplot(131)
+plt.title('initial channelStorage [m3]')
+plt.imshow(hydrologicModel.get_var('channelStorage'), vmax=np.max(waterVolume_HDYN1D_2_HLOG_BMI))
+plt.colorbar(orientation='horizontal')
+plt.subplot(132)
+plt.title('waterVolume (1D) [m3]')
+plt.imshow(waterVolume_HDYN1D_2_HLOG_BMI, vmax=np.max(waterVolume_HDYN1D_2_HLOG_BMI))
+plt.colorbar(orientation='horizontal')
+plt.subplot(133)
+plt.title('updated channelStorage [m3]')
+plt.imshow(hydrologicModel.get_var('channelStorage'), vmax=np.max(waterVolume_HDYN1D_2_HLOG_BMI))
+plt.colorbar(orientation='horizontal')
+plt.savefig(os.path.join(verbose_folder,'iniAndUpdatedChannelStoragePCR.png'), dpi=300)
 
 
 # In[25]:
