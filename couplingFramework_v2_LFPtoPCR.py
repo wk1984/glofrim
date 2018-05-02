@@ -160,8 +160,9 @@ hydrologicModel = pcrglobwb_bmi_v203.pcrglobwb_bmi.pcrglobwbBMI()
 hydrologicModel.initialize(config_pcr)
 print '\n>>> PCR Initialized <<<\n'
 
-# spin-up PCR-GLOBWB
-hydrologicModel.spinup()
+# spin-up PCR-GLOBWB (only for actual run)
+if prepRun == True:
+    hydrologicModel.spinup()
 
 # -------------------------------------------------------------------------------------------------
 # INITIALIZING HYDRODYNAMIC MODEL
