@@ -59,7 +59,7 @@ config.parse_configuration_file(sys.argv[1])
 # DEFINE WHETHER TO PERFORM PREPARATORY OR ACTUAL RUN
 # -------------------------------------------------------------------------------------------------
 
-prepRun = strtobool(sys.argv[2])
+prepRun = strtobool(sys.argv[3])
 
 if prepRun == True:
     print '\n#######################'
