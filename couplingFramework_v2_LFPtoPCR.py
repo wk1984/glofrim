@@ -62,13 +62,13 @@ config.parse_configuration_file(sys.argv[1])
 prepRun = strtobool(sys.argv[3])
 
 if prepRun == True:
-    print '\n#######################'
-    print 'PREPARATORY RUN ACTIVE!'
-    print '#######################\n'
+    print '\n#############################'
+    print '### PREPARATORY RUN ACTIVE! ###'
+    print '#############################\n'
 elif prepRun == False:
-    print '\n##################'
-    print 'ACTUAL RUN ACTIVE!'
-    print '##################\n'
+    print '\n########################'
+    print '### ACTUAL RUN ACTIVE! ###'
+    print '########################\n'
 else:
     sys.exit('\nplease indicate properly whether to perform preparatory or actual run!\n')
 
@@ -161,7 +161,7 @@ hydrologicModel.initialize(config_pcr)
 print '\n>>> PCR Initialized <<<\n'
 
 # spin-up PCR-GLOBWB (only for actual run)
-if prepRun == True:
+if prepRun == False:
     hydrologicModel.spinup()
 
 # -------------------------------------------------------------------------------------------------
@@ -269,7 +269,7 @@ if prepRun == True:
 
     f1 = open(os.path.join(verbose_folder,'couple_HDYN_2_HLOG.pkl'), 'wb')
     f2 = open(os.path.join(verbose_folder,'couple_HLOG_2_HDYN.pkl'), 'wb')
-    f2 = open(os.path.join(verbose_folder,'coupled_HLOG_indices.pkl'), 'wb')
+    f3 = open(os.path.join(verbose_folder,'coupled_HLOG_indices.pkl'), 'wb')
 
     pickle.dump(couple_HDYN_2_HLOG, f1, -1)
     pickle.dump(couple_HLOG_2_HDYN, f2, -1)

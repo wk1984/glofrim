@@ -48,7 +48,8 @@ def write2log(model_dir, model_file, latlon, use_2way, useFluxes, use_RFS, prepR
     """
 
     #- creating folder to store verbose and log output
-    folder_name = model_dir + model_file + '_verboseOut'
+    folder_name = os.path.join(model_dir, model_file)
+    folder_name = folder_name + '_verboseOut'
 
     #-write end time of simulation finished when finished
     if moment == 'start':
@@ -65,10 +66,7 @@ def write2log(model_dir, model_file, latlon, use_2way, useFluxes, use_RFS, prepR
         print 'use floodplain infiltration factor: ', bool(use_floodplain_infiltration_factor)
         print 'adjust initial groundwater: ', bool(adjust_initial_groundwater)
         print 'verbose mode on: ', bool(verbose)
-        if verbose == True:
-            print '\nVerbose Output and Log-File saved in: ', folder_name + os.linesep
-        else:
-            print ''
+        print '\nverbose folder location: ', folder_name + os.linesep
 
     elif (moment == 'end') and (verbose == True):
         #- check if folder has already been created
