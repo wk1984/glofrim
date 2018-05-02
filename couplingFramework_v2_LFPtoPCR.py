@@ -38,6 +38,7 @@ import pyproj as pyproj
 import datetime
 import pdb
 import time
+import pickle
 import bmi.wrapper
 import model as pcrglobwb_bmi_v203
 from model import pcrglobwb_bmi
@@ -53,6 +54,23 @@ from coupling_PCR_FM_2way import configuration
 
 config = configuration.Configuration()
 config.parse_configuration_file(sys.argv[1])
+
+# -------------------------------------------------------------------------------------------------
+# DEFINE WHETHER TO PERFORM PREPARATORY OR ACTUAL RUN
+# -------------------------------------------------------------------------------------------------
+
+prepRun = strtobool(sys.argv[2])
+
+if prepRun == True:
+    print '\n#######################'
+    print 'PREPARATORY RUN ACTIVE!'
+    print '#######################\n'
+elif prepRun == False:
+    print '\n##################'
+    print 'ACTUAL RUN ACTIVE!'
+    print '##################\n'
+else:
+    sys.exit('\nplease indicate properly whether to perform preparatory or actual run!\n')
 
 # -------------------------------------------------------------------------------------------------
 # SPECIFY MODEL SETTINGS
@@ -133,7 +151,7 @@ else:
 # -------------------------------------------------------------------------------------------------
 
 # initiate logging and define folder for verbose-output
-verbose_folder = model_functions.write2log(model_dir, model_file, latlon, use_2way, use_Fluxes, use_RFS, use_floodplain_infiltration_factor=False, adjust_initial_groundwater=False, verbose=False, moment='start')
+verbose_folder = model_functions.write2log(model_dir, model_file, latlon, use_2way, use_Fluxes, use_RFS, prepRun, use_floodplain_infiltration_factor=False, adjust_initial_groundwater=False, verbose=False, moment='start')
 print 'Model Start-Time: ', datetime.datetime.now()
 print ''
 
@@ -232,24 +250,85 @@ hydrologicModel.set_var(('WaterBodies', 'ActivateCoupling'), 'True')
 
 # -------------------------------------------------------------------------------------------------
 # COUPLING THE GRIDS
-#TODO: think of more efficient ways to do this!!!
 # -------------------------------------------------------------------------------------------------
 
-# linking PCR-cells with 1D hydrodynamic cells (since use_RFS=True)
-couple_HDYN_2_HLOG, couple_HLOG_2_HDYN, coupled_HLOG_indices = coupling_functions.assignPCR2cells(landmask_pcr,
-                                                                                                  hydrodynamic_coords_1D,
-                                                                                                  verbose)
+if prepRun == True:
 
-print len(hydrodynamic_coords_1D)
-print len(couple_HDYN_2_HLOG)
+    print '\ncoupling hydrology with hydrodynamics for 1D...'
 
-# linking PCR-cells with 2D hydrodynamic cells
-couple_HDYN_2_HLOG_2way, couple_HLOG_2_HDYN_2way, coupled_HLOG_indices_2way = coupling_functions.assignPCR2cells(landmask_pcr,
-                                                                                                                 hydrodynamic_coords_2D,
-                                                                                                                 verbose)
+    # linking PCR-cells with 1D hydrodynamic cells (since use_RFS=True)
+    couple_HDYN_2_HLOG, couple_HLOG_2_HDYN, coupled_HLOG_indices = coupling_functions.assignPCR2cells(landmask_pcr,
+                                                                                                      hydrodynamic_coords_1D,
+                                                                                                      verbose)
 
-print len(hydrodynamic_coords_2D)
-print len(couple_HDYN_2_HLOG_2way)
+    # print len(hydrodynamic_coords_1D)
+    # print len(couple_HDYN_2_HLOG)
+
+    print '...pickling data for 1D to files...'
+
+    f1 = open(os.path.join(verbose_folder,'couple_HDYN_2_HLOG.pkl'), 'wb')
+    f2 = open(os.path.join(verbose_folder,'couple_HLOG_2_HDYN.pkl'), 'wb')
+    f2 = open(os.path.join(verbose_folder,'coupled_HLOG_indices.pkl'), 'wb')
+
+    pickle.dump(couple_HDYN_2_HLOG, f1, -1)
+    pickle.dump(couple_HLOG_2_HDYN, f2, -1)
+    pickle.dump(coupled_HLOG_indices, f3, -1)
+
+    f1.close()
+    f2.close()
+    f3.close()
+
+    print '...succesfully pickled data for 1D!\n'
+
+    print 'coupling hydrology with hydrodynamics for 2D...'
+
+    # linking PCR-cells with 2D hydrodynamic cells
+    couple_HDYN_2_HLOG_2way, couple_HLOG_2_HDYN_2way, coupled_HLOG_indices_2way = coupling_functions.assignPCR2cells(landmask_pcr,
+                                                                                                                     hydrodynamic_coords_2D,
+                                                                                                                     verbose)
+
+    # print len(hydrodynamic_coords_2D)
+    # print len(couple_HDYN_2_HLOG_2way)
+
+    print '...pickling data for 2D to files...'
+
+    f4 = open(os.path.join(verbose_folder,'couple_HDYN_2_HLOG_2way.pkl'), 'wb')
+    f5 = open(os.path.join(verbose_folder,'couple_HLOG_2_HDYN_2way.pkl'), 'wb')
+    f6 = open(os.path.join(verbose_folder,'coupled_HLOG_indices_2way.pkl'), 'wb')
+
+    pickle.dump(couple_HDYN_2_HLOG_2way, f4, -1)
+    pickle.dump(couple_HLOG_2_HDYN_2way, f5, -1)
+    pickle.dump(coupled_HLOG_indices_2way, f6, -1)
+
+    f4.close()
+    f5.close()
+    f6.close()
+
+    print '...succesfully pickled data for 2D!\n'
+
+    sys.exit('\nAll preparatory files have successfully been pickled\n')
+
+elif prepRun == False:
+
+    print '\nloading pickled files...'
+
+    f1 = open(os.path.join(verbose_folder,'couple_HDYN_2_HLOG.pkl'), 'rb')
+    f2 = open(os.path.join(verbose_folder,'couple_HLOG_2_HDYN.pkl'), 'rb')
+    f2 = open(os.path.join(verbose_folder,'coupled_HLOG_indices.pkl'), 'rb')
+
+    couple_HDYN_2_HLOG = pickle.load(f1)
+    couple_HLOG_2_HDYN = pickle.load(f2)
+    coupled_HLOG_indices = pickle.load(f3)
+
+    f4 = open(os.path.join(verbose_folder,'couple_HDYN_2_HLOG_2way.pkl'), 'rb')
+    f5 = open(os.path.join(verbose_folder,'couple_HLOG_2_HDYN_2way.pkl'), 'rb')
+    f6 = open(os.path.join(verbose_folder,'coupled_HLOG_indices_2way.pkl'), 'rb')
+
+    couple_HDYN_2_HLOG_2way = pickle.load(f4)
+    couple_HLOG_2_HDYN_2way = pickle.load(f5)
+    coupled_HLOG_indices_2way = pickle.load(f6)
+
+    print '...pickled files succesfully loaded!\n'
 
 # -------------------------------------------------------------------------------------------------
 # EXTRACT CURRENT WATER DEPTH AND ASSIGNT TO 1D OR 2D CELLS

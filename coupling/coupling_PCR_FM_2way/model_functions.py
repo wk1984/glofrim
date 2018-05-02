@@ -39,7 +39,7 @@ def set_values_in_array(vals, idx, update_vals):
 
 # =============================================================================
 
-def write2log(model_dir, model_file, latlon, use_2way, useFluxes, use_RFS, use_floodplain_infiltration_factor, adjust_initial_groundwater, verbose, moment):
+def write2log(model_dir, model_file, latlon, use_2way, useFluxes, use_RFS, prepRun, use_floodplain_infiltration_factor, adjust_initial_groundwater, verbose, moment):
     """
     Writing model settings/paths/etc to a txt-file in directory.
     Note that PCR-GLOBWB is additionally writing its own log-file and Delft3D DFM adds model
@@ -61,6 +61,7 @@ def write2log(model_dir, model_file, latlon, use_2way, useFluxes, use_RFS, use_f
         print 'lat-lon on: ', bool(latlon)
         print 'fluxes on: ', bool(useFluxes)
         print 'RFS on: ', bool(use_RFS)
+        print 'Preparatory run active: ', bool(prepRun)
         print 'use floodplain infiltration factor: ', bool(use_floodplain_infiltration_factor)
         print 'adjust initial groundwater: ', bool(adjust_initial_groundwater)
         print 'verbose mode on: ', bool(verbose)
