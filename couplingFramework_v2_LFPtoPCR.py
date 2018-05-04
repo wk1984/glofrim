@@ -62,9 +62,9 @@ config.parse_configuration_file(sys.argv[1])
 prepRun = strtobool(sys.argv[3])
 
 if prepRun == True:
-    print '\n#############################'
+    print '\n###############################'
     print '### PREPARATORY RUN ACTIVE! ###'
-    print '#############################\n'
+    print '###############################\n'
 elif prepRun == False:
     print '\n########################'
     print '### ACTUAL RUN ACTIVE! ###'
@@ -231,7 +231,7 @@ print '\n>>> PCR data retrieved <<<\n'
 # PLOT LFP DEM, CHANNEL DEPTH, CHANNEL WIDTH
 # -------------------------------------------------------------------------------------------------
 
-if model_type == 'LFP':
+if (model_type == 'LFP') and (verbose==True):
     plt.figure(figsize=(16,8))
     plt.subplot(131)
     plt.imshow(DEM, vmax=200)
@@ -387,7 +387,7 @@ if use_2way == True:
 # PLOT
 # -------------------------------------------------------------------------------------------------
 
-if use_2way == True:
+if (use_2way == True) and (verbose == True):
     plt.figure(figsize=(16,8))
     plt.subplot(131)
     plt.title('inundatedArea (1D) [m2]')
@@ -448,7 +448,7 @@ if use_2way == True:
 # PLOT
 # -------------------------------------------------------------------------------------------------
 
-if use_2way == True:
+if (use_2way == True) and (verbose == True):
     plt.figure(figsize=(16,8))
     plt.subplot(141)
     plt.title('waterVolume (1D) [m3]')
@@ -482,7 +482,7 @@ if use_2way == True:
 # PLOT
 # -------------------------------------------------------------------------------------------------
 
-if use_2way == True:
+if (use_2way == True) and (verbose == True):
     plt.figure(figsize=(16,8))
     plt.subplot(131)
     plt.title('initial channelStorage [m3]')
