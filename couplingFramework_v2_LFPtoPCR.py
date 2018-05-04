@@ -660,7 +660,9 @@ while hydrologicModel.get_time_step() < end_time:
                                                                                               current_water_volume_1D,
                                                                                               couple_HLOG_2_HDYN,
                                                                                               coupled_HLOG_indices,
-    if use_2way == True:                                                                                          landmask_pcr)
+                                                                                              landmask_pcr)
+
+    if use_2way == True:
         waterVolume_HDYN2D_2_HLOG_BMI,\
             waterDepth_HDYN2D_2_HLOG_BMI = model_functions.determine_inundationVolume_HDYN_2D(current_water_volume_2D,
                                                                                               inundatedArea_HDYN2D_2_HLOG,
