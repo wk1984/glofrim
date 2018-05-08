@@ -962,8 +962,8 @@ def determine_new_channelStoragePCR(model_pcr, riverVolume):
 #				new_channelStorage_pcr[i][j] = current_channelStorage_pcr[i][j] + water_volume_FM_2_PCR[i][j] # OLD, as used by Arjen
 				new_channelStorage_pcr[i][j] = riverVolume[i][j]
 
-    if new_channelStorage_pcr.shape != current_channelStorage_pcr.shape:
-        sys.exit('\ncomputed channel storage array does not match shape of PCR map\n')
+        if new_channelStorage_pcr.shape != current_channelStorage_pcr.shape:
+            sys.exit('\ncomputed channel storage array does not match shape of PCR map\n')
 
 	return new_channelStorage_pcr
 
