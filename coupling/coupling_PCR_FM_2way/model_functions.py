@@ -501,7 +501,7 @@ def determine_inundationVolume_HDYN_2D(currentVolume_HDYN, inundated_area_FM_2_P
 
 # =============================================================================
 
-def updateStorage(model_pcr, landmask_pcr, missing_value_pcr, missing_value_landmask, CoupledPCRcellIndices, CouplePCR2model, waterVolume_HDYN1D_2_HLOG_BMI):
+def updateStorage(model_pcr, missing_value_pcr, waterVolume_HDYN1D_2_HLOG_BMI):
     """
     This is done to prevent the lakes/reservoirs in PCR from draining all at once,
     introducing a huge flood wave at certain areas, e.g. reservoirs.
@@ -511,27 +511,26 @@ def updateStorage(model_pcr, landmask_pcr, missing_value_pcr, missing_value_land
 
     # get required variables from PCR-GLOBWB
     #-OLD: current_channel_storage_pcr     = model_pcr.get_var('channelStorage')
-    current_waterbody_storage_pcr   = np.copy(model_pcr.get_var(('routing', 'waterBodyStorage')))
 
     new_storage_pcr = determine_new_channelStoragePCR(model_pcr,
-                                                        landmask_pcr,
-                                                        missing_value_landmask,
-                                                        waterVolume_HDYN1D_2_HLOG_BMI)
+                                                      waterVolume_HDYN1D_2_HLOG_BMI)
 
     # no channel storage
     #-OLD: new_channel_storage_pcr = set_values_in_array(current_channel_storage_pcr, CoupledPCRcellIndices, 0.)
+
     # # no waterbody storage
-    new_waterbody_storage_pcr = set_values_in_array(current_waterbody_storage_pcr, CoupledPCRcellIndices, 0.)
+    new_waterbody_storage_pcr = np.zeros_like(model_pcr.get_var(('routing', 'waterBodyStorage')))
+    model_pcr.set_var(('routing','waterBodyStorage'), new_waterbody_storage_pcr)
 
     # overwriting variables with new values
     model_pcr.set_var('channelStorage', new_storage_pcr, missing_value_pcr)
-    model_pcr.set_var(('routing','waterBodyStorage'), new_waterbody_storage_pcr)
+
 
     return
 
 # =============================================================================
 
-def updateHydrologicVariables(model_pcr, water_depths_floodplains_FM_2_PCR, inundated_fraction_floodplains_FM_2_PCR):
+def updateHydrologicVariables(model_pcr,inundationFraction, floodplainVolume):
     """
     This functions update inundation depth and fraction in the hydrologic models based on hydrodynamic results
 
@@ -550,33 +549,21 @@ def updateHydrologicVariables(model_pcr, water_depths_floodplains_FM_2_PCR, inun
     """
 
     # add water from FM floodplains back to PCR
-    #- testing before setting
-    # print 'grassland floodplainWaterLayer before setting:'
-    # print 'min', np.min(water_depths_floodplains_FM_2_PCR)
-    print 'max fWL', np.max(water_depths_floodplains_FM_2_PCR)
-    #- setting values
-    model_pcr.set_var(('grassland','floodplainWaterLayer'), water_depths_floodplains_FM_2_PCR)
-    model_pcr.set_var(('forest','floodplainWaterLayer'), water_depths_floodplains_FM_2_PCR)
-    #- testing after setting
-    # print 'grassland floodplainWaterLayer after setting:'
-    # print 'min', np.min(model_pcr.get_var(('grassland','floodplainWaterLayer')))
-    # print 'max', np.min(model_pcr.get_var(('grassland','floodplainWaterLayer')))
+    #NOTE: not required anymore with new code from Edwin
+    # model_pcr.set_var(('grassland','floodplainWaterLayer'), water_depths_floodplains_FM_2_PCR)
+    # model_pcr.set_var(('forest','floodplainWaterLayer'), water_depths_floodplains_FM_2_PCR)
 
     # set the variable for dealing with floodplain inundated area fraction in PCR
-    model_pcr.set_var(('grassland','inundatedFraction'), inundated_fraction_floodplains_FM_2_PCR)
-    model_pcr.set_var(('forest','inundatedFraction'), inundated_fraction_floodplains_FM_2_PCR)
-
-    # if couple_channel_storage == True:
-    #     # add water from FM rivers back to PCR
-    #     print '\nwater volume added to channelStorage in PCR %.2E' % np.sum(new_channelStorage_pcr)
-    #     print ''
-    #     model_pcr.set_var(('routing','channelStorage'), new_channelStorage_pcr)
+    model_pcr.set_var(('grassland','inundatedFraction'), inundationFraction)
+    model_pcr.set_var(('forest','inundatedFraction'), inundationFraction)
 
 #   # assuming this in not required anymore if RFS is implemented differently than in Arjen's version
 #	# could however still be implemented just that then it would be one array and not the fractions and in the worst case the fraction is 1 always?
 #
 #   # set the variable for dealing with river (water bodies) area fraction in PCR
 #   model_pcr.set_var(('routing','waterBodyFractionFM'), inundated_fraction_rivers_FM_2_PCR)
+
+    model_pcr.set_var(('routing','transferVolToTopWaterLayer'), floodplainVolume)
 
     return
 
@@ -948,7 +935,7 @@ def activate_floodplain_infiltration_factor(model_pcr, CoupledPCRcellIndices, us
 
 # =============================================================================
 
-def determine_new_channelStoragePCR(model_pcr, landmask_pcr, missing_value_landmask, water_volume_FM_2_PCR):
+def determine_new_channelStoragePCR(model_pcr, riverVolume):
 	"""
 	couples back the aggregated water volume of each hydrodynamic channel cell to the channel storage in PCR
 
@@ -967,13 +954,16 @@ def determine_new_channelStoragePCR(model_pcr, landmask_pcr, missing_value_landm
 
 	current_channelStorage_pcr  = np.copy(model_pcr.get_var(('routing','channelStorage')))
 
-	new_channelStorage_pcr = coupling_functions.zeroMapArray(landmask_pcr, missingValuesMap=missing_value_landmask)
+	new_channelStorage_pcr = np.zeros_like(current_channelStorage_pcr)
 
 	for i in range(len(new_channelStorage_pcr)):
 		for j in range(len(new_channelStorage_pcr[0])):
 			if current_channelStorage_pcr[i][j] != -999:
 #				new_channelStorage_pcr[i][j] = current_channelStorage_pcr[i][j] + water_volume_FM_2_PCR[i][j] # OLD, as used by Arjen
-				new_channelStorage_pcr[i][j] = water_volume_FM_2_PCR[i][j]
+				new_channelStorage_pcr[i][j] = riverVolume[i][j]
+
+    if new_channelStorage_pcr.shape != current_channelStorage_pcr.shape:
+        sys.exit('\ncomputed channel storage array does not match shape of PCR map\n')
 
 	return new_channelStorage_pcr
 

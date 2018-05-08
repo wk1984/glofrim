@@ -6,8 +6,11 @@ GLOFRIM 2.0
 This script executes the 2way coupling between large-scale hydrology (PCR-GLOBWB) and hydrodynamics (Delft3D FM or LISFLOODFP).
 It requires two files with information about the coupling settings and the paths to the models in each specific environmentself.
 
-As such, the script should be executed likeL
-    python couplingFramework_v2_LFPtoPCR.py settingsFile.set paths.env
+As such, the script should be executed like:
+    python couplingFramework_v2_LFPtoPCR.py settingsFile.set paths.env True/False
+
+If the last switch is True, then a preparatory run is initiated to perform the grid coupling onlyself.
+If it is False, then the already prepared grid coupling py-objects are used to perform the remaining computations and actual exchange.
 
 Further information can be found on GitHub or by contacting the author.
 
@@ -469,14 +472,13 @@ if (use_2way == True) and (verbose == True):
     plt.savefig(os.path.join(verbose_folder,'inundatedVolumeAndDepth_HDYN_2_HLOG_BMI.png'), dpi=300)
 
 # -------------------------------------------------------------------------------------------------
-# UPDATE STORAGES IN PCR
+# UPDATE STORAGES IN PCR: SETTING WATERBODYSTORAGE TO 0 AND CHANNELSTORAGE TO 1D VOLUME FROM HYD
 # -------------------------------------------------------------------------------------------------
 
 if use_2way == True:
-    if couple_channelStorage == False:
-        waterVolume_HDYN1D_2_HLOG_BMI = np.zeros_like(waterVolume_HDYN2D_2_HLOG_BMI)
-
-    model_functions.updateStorage(hydrologicModel, landmask_pcr, missing_value_pcr, missing_value_landmask, coupled_HLOG_indices, couple_HLOG_2_HDYN, waterVolume_HDYN1D_2_HLOG_BMI)
+    model_functions.updateStorage(hydrologicModel,
+                                  missing_value_pcr,
+                                  waterVolume_HDYN1D_2_HLOG_BMI)
 
 # -------------------------------------------------------------------------------------------------
 # PLOT
@@ -499,13 +501,13 @@ if (use_2way == True) and (verbose == True):
     plt.savefig(os.path.join(verbose_folder,'iniAndUpdatedChannelStoragePCR.png'), dpi=300)
 
 # -------------------------------------------------------------------------------------------------
-# UPDATING PCR WITH FLOODPLAIN INUNDATION DEPTH AND FRACTION
+# UPDATING PCR WITH FLOODPLAIN INUNDATION FRACTION AND VOLUME ON SURFACE
 # -------------------------------------------------------------------------------------------------
 
 if use_2way == True:
     model_functions.updateHydrologicVariables(hydrologicModel,
-                                              waterDepth_HDYN2D_2_HLOG_BMI,
-                                              inundatedFraction_HDYN2D_2_HLOG_BMI)
+                                              inundatedFraction_HDYN2D_2_HLOG_BMI,
+                                              waterVolume_HDYN2D_2_HLOG_BMI)
 
 # -------------------------------------------------------------------------------------------------
 # UPDATING PCR TO NEXT TIME STEP
@@ -516,8 +518,6 @@ hydrologicModel.update(1)
 # -------------------------------------------------------------------------------------------------
 # COMPUTING DELTA VOLUME TO BE COUPLED FROM PCR TO HYDRODYNAMIC MODEL
 # -------------------------------------------------------------------------------------------------
-
-#waterVolume_HDYN2D_2_HLOG_BMI = np.zeros_like(waterVolume_HDYN2D_2_HLOG_BMI)
 
 delta_volume_PCR, delta_volume_PCR_1way = model_functions.calculateDeltaVolumes(hydrologicModel,
                                                                                 missing_value_pcr,
@@ -671,18 +671,16 @@ while hydrologicModel.get_time_step() < end_time:
                                                                                               coupled_HLOG_indices_2way,
                                                                                               landmask_pcr)
 
-    # ini_channelStorage = np.copy(hydrologicModel.get_var('channelStorage'))
-
-    # if couple_channelStorage == False:
-    #     waterVolume_HDYN1D_2_HLOG_BMI = np.zeros_like(waterVolume_HDYN2D_2_HLOG_BMI)
     if use_2way == True:
-        model_functions.updateStorage(hydrologicModel, landmask_pcr, missing_value_pcr, missing_value_landmask, coupled_HLOG_indices, couple_HLOG_2_HDYN, waterVolume_HDYN1D_2_HLOG_BMI)
+        model_functions.updateStorage(hydrologicModel,
+                                      missing_value_pcr,
+                                      waterVolume_HDYN1D_2_HLOG_BMI)
 
 
     if use_2way == True:
         model_functions.updateHydrologicVariables(hydrologicModel,
-                                                  waterDepth_HDYN2D_2_HLOG_BMI,
-                                                  inundatedFraction_HDYN2D_2_HLOG_BMI)
+                                                  inundatedFraction_HDYN2D_2_HLOG_BMI,
+                                                  waterVolume_HDYN2D_2_HLOG_BMI)
 
     hydrologicModel.update(1)
 
