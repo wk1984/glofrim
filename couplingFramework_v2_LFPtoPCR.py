@@ -324,7 +324,7 @@ elif prepRun == False:
 
     f1 = open(os.path.join(verbose_folder,'couple_HDYN_2_HLOG.pkl'), 'rb')
     f2 = open(os.path.join(verbose_folder,'couple_HLOG_2_HDYN.pkl'), 'rb')
-    f2 = open(os.path.join(verbose_folder,'coupled_HLOG_indices.pkl'), 'rb')
+    f3 = open(os.path.join(verbose_folder,'coupled_HLOG_indices.pkl'), 'rb')
 
     couple_HDYN_2_HLOG = pickle.load(f1)
     couple_HLOG_2_HDYN = pickle.load(f2)
