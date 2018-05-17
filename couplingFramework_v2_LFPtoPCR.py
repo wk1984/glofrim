@@ -7,7 +7,7 @@ This script executes the 2way coupling between large-scale hydrology (PCR-GLOBWB
 It requires two files with information about the coupling settings and the paths to the models in each specific environmentself.
 
 As such, the script should be executed like:
-    python couplingFramework_v2_LFPtoPCR.py settingsFile.set paths.env True/False
+    python couplingFramework_v2_LFPtoPCR.py settingsFile.set paths.env True/False discharge/runoff
 
 If the last switch is True, then a preparatory run is initiated to perform the grid coupling onlyself.
 If it is False, then the already prepared grid coupling py-objects are used to perform the remaining computations and actual exchange.
@@ -96,6 +96,11 @@ if use_2way == True:
 verbose = strtobool(config.general_settings['verbose'])
 
 couple_channelStorage = True
+
+if not sys.argv[4]:
+    forcing = 'discharge'
+else:
+    forcing = str(sys.argv[4])
 
 # -------------------------------------------------------------------------------------------------
 # SPECIFY NUMERICAL SETTINGS
@@ -524,7 +529,8 @@ delta_volume_PCR, delta_volume_PCR_1way = model_functions.calculateDeltaVolumes(
                                                                                 secPerDay,
                                                                                 coupled_HLOG_indices,
                                                                                 cellarea_data_pcr,
-                                                                                waterVolume_HDYN2D_2_HLOG_BMI)
+                                                                                waterVolume_HDYN2D_2_HLOG_BMI,
+                                                                                forcing)
 
 # -------------------------------------------------------------------------------------------------
 # PLOT
@@ -689,7 +695,8 @@ while hydrologicModel.get_time_step() < end_time:
                                                                             secPerDay,
                                                                             coupled_HLOG_indices,
                                                                             cellarea_data_pcr,
-                                                                            waterVolume_HDYN2D_2_HLOG_BMI)
+                                                                            waterVolume_HDYN2D_2_HLOG_BMI,
+                                                                            forcing)
 
     delta_water_DFM_1way, verbose_volume_DFM_1way = model_functions.calculateDeltaWater(hydrodynamicModel,
                                                                                 couple_HDYN_2_HLOG,

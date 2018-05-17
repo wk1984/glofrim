@@ -597,7 +597,7 @@ def noLDD(model_pcr, CoupledPCRcellIndices, verbose_folder, verbose):
 
 # =============================================================================
 
-def calculateDeltaVolumes(model_pcr, missing_value_pcr, secPerDay, CoupledPCRcellIndices, cellarea_data_pcr, water_volume_FM_2_PCR):
+def calculateDeltaVolumes(model_pcr, missing_value_pcr, secPerDay, CoupledPCRcellIndices, cellarea_data_pcr, water_volume_FM_2_PCR, forcing='discharge'):
     """
     Calculating the delta volumes [m3/d] for all coupled PCR-cells as well as for those coupled to hydrodynamic channels only.
     For the feedback from DFM/LFP, the hydrodynamic model determines the amount of actual delta volume that can be added.
@@ -622,7 +622,12 @@ def calculateDeltaVolumes(model_pcr, missing_value_pcr, secPerDay, CoupledPCRcel
 #    model_pcr.update(1)
 
     #- retrieve data from PCR-GLOBWB
-    current_discharge_pcr  = np.copy(model_pcr.get_var('discharge'))
+    if forcing == 'discharge':
+        current_discharge_pcr  = np.copy(model_pcr.get_var('discharge'))
+    elif forcing == 'runoff':
+        current_discharge_pcr  = model_pcr.get_var('runoff') * model_pcr.get_var('cellArea') / 86400.
+    else:
+        sys.exit('\nNeither discharge nor runoff chosen as forcing!\n')
     # current_runoff_pcr     = np.copy(model_pcr.get_var('landSurfaceRunoff'))
     current_runoff_pcr = np.zeros_like(current_discharge_pcr)
 
