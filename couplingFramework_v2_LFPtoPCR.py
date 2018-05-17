@@ -97,10 +97,13 @@ verbose = strtobool(config.general_settings['verbose'])
 
 couple_channelStorage = True
 
-if not sys.argv[4]:
+try:
+    sys.argv[4]
+except NameError:
     forcing = 'discharge'
 else:
     forcing = str(sys.argv[4])
+
 
 # -------------------------------------------------------------------------------------------------
 # SPECIFY NUMERICAL SETTINGS
